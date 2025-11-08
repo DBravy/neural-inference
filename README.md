@@ -34,7 +34,6 @@ Then open `http://localhost:8080` in your browser.
 Pre-built profiles for testing:
 - `healthy_balanced` - Well-rested, regular exercise, good nutrition
 - `chronically_sleep_deprived` - Multiple nights of poor sleep
-- `caffeine_dependent` - High caffeine intake, withdrawal effects
 - `shift_worker` - Night shifts with circadian disruption
 - `high_performer` - Intense exercise and optimized schedule
 - `stressed_student` - Poor sleep, high stress, irregular meals
