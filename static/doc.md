@@ -114,13 +114,13 @@ plasma_conc = dose_mg × e^(-0.15 × hours_ago)
 **Formula**:
 ```rust
 cortisol_multiplier = if !controllable && social_evaluative {
-    3.0
+    1.75
 } else if !controllable {
-    2.0
+    1.4
 } else if social_evaluative {
-    1.5
+    1.25
 } else {
-    0.5 // Controllable stress
+    1.0 // Controllable stress
 };
 ```
 
@@ -229,6 +229,52 @@ scaled_pressure = 0.3 + 0.4 × (raw_pressure + 1.0) / 2.0
 - 0.3-0.5: Comfortable waking state
 - 0.5-0.7: Increasing sleep pressure
 - >0.7: Strong urge to sleep
+
+### Cortisol (Circadian Rhythm Modulation)
+**Special handling**: Circadian rhythm sets the healthy baseline; events modulate around this natural rhythm
+
+**Research basis**: Cortisol exhibits robust 24h rhythm driven by SCN; peak at ~8:30 AM (399 nmol/L), nadir at midnight (<50 nmol/L). This rhythm exists even in completely stress-free individuals. Cortisol Awakening Response (CAR) produces 50-75% spike peaking 30-45 minutes post-wake.
+
+**Healthy baseline formula**:
+```rust
+healthy_baseline = 0.15 + (0.50 × circadian_multiplier)
+// Range: 0.15 (night nadir) → 0.65 (morning peak)
+```
+
+**Circadian multiplier** (time-of-day component):
+
+| Time Period | Multiplier | Healthy Baseline |
+| 12 AM - 2 AM | 0.25 | 0.275 |
+| 2 AM - 6 AM | 0.25 → 0.6 | 0.275 → 0.45 |
+| 6 AM - 9 AM | 0.6 → 1.0 → 0.9 | 0.45 → 0.65 → 0.60 |
+| 9 AM - 12 PM | 0.9 → 0.7 | 0.60 → 0.50 |
+| 12 PM - 6 PM | 0.7 → 0.45 | 0.50 → 0.375 |
+| 6 PM - 10 PM | 0.45 → 0.3 | 0.375 → 0.30 |
+| 10 PM - 12 AM | 0.3 → 0.25 | 0.30 → 0.275 |
+
+**Event modulation**:
+- **Stress load** (positive contributions): Adds on top of baseline
+- **Relaxation effect** (negative contributions): Can reduce by max 0.15 below baseline
+- **Awakening boost** (CAR): 1.0× → 1.75× → 1.0× over 2 hours post-wake
+- **Circadian stress sensitivity**: 0.5 + (0.5 × circadian_multiplier) — easier to spike cortisol during natural peak times
+
+**Combined formula**:
+```rust
+healthy_baseline = 0.15 + (0.50 × circadian_multiplier)
+stress_load = max(accumulated_events, 0.0)  // Only positive contributions
+relaxation = min(accumulated_events, 0.0).max(-0.15)  // Cap reduction at -0.15
+circadian_stress_sensitivity = 0.5 + (0.5 × circadian_multiplier)
+stress_response = stress_load × awakening_boost × circadian_stress_sensitivity
+final_cortisol = (healthy_baseline + stress_response + relaxation).clamp(0.15, 1.0)
+```
+
+**Examples**:
+- **Healthy person, 8:30 AM:** 0.65 baseline - 0.15 relaxation = **0.50** (normal morning level)
+- **Healthy person, midnight:** 0.275 baseline - 0.15 relaxation = **0.15** (healthy nadir)
+- **High stress, 8:30 AM, 30min post-wake:** 0.65 + (0.8 × 1.75 × 1.0) + 0 = **1.0** (maxed, appropriate response)
+- **High stress, midnight:** 0.275 + (0.8 × 1.0 × 0.625) = **0.78** (elevated but not maxed)
+
+**Key benefit**: Maintains biologically-realistic cortisol levels. A healthy person shows natural peak/nadir rhythm (~0.50 morning / ~0.15-0.20 night) rather than crashing to zero. Stress elevates cortisol appropriately but with time-of-day sensitivity.
 
 ## Dopamine-Serotonin Balance System
 
@@ -377,7 +423,7 @@ Each primitive has biologically-appropriate windows:
 | Glucose | 8h | 2h | Fast metabolism |
 | Norepinephrine | 12h | 4h | Caffeine + acute stress |
 | Adenosine | 20h | 16h | Wake period + debt |
-| Cortisol | 48h | 12h | Acute + chronic stress |
+| Cortisol | 48h | 12h | Acute + chronic stress; circadian-modulated |
 | Dopamine | 72h | 24h | Lifestyle patterns |
 | Serotonin | 96h | 36h | Mood stability |
 | Circadian Phase | 168h | 72h | Weekly entrainment |
@@ -439,6 +485,7 @@ Events contain only **activity metadata**, not impacts:
    - For each event, call research-based impact function
    - Apply time decay to impacts
    - Aggregate weighted impacts
+   - For cortisol: Apply circadian rhythm multiplier and awakening boost
 6. Detect sequence patterns
 7. Apply sequence adjustments
 8. Apply cross-primitive modifiers
@@ -521,6 +568,11 @@ All formulas are based on peer-reviewed research. Key papers include:
 ### Stress
 - Dickerson & Kemeny (2004). Meta-analysis of psychosocial stress (208 studies)
 - Maier & Watkins (2005). Controllability and stress responses
+
+### Cortisol Circadian Rhythm
+- Debono et al. (2009). "Cortisol as a marker for increased risk of cardiac disease." *J Clin Endocrinol Metab*. Peak ~8:30 AM (399 nmol/L), nadir at midnight (<50 nmol/L)
+- Clow et al. (2004). "The cortisol awakening response." *Psychoneuroendocrinology*. CAR: 50-75% increase peaking 30-45 min post-wake
+- Van Cauter et al. (2017). "Functional and clinical significance of the 24-hour rhythm of circulating glucocorticoids." *Endocrine Reviews*
 
 (Still working on full research document with complete citations and quantitative relationships)
 

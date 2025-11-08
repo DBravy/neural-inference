@@ -532,10 +532,13 @@ fn compute_sleep_impacts(event: &Event) -> HashMap<String, f64> {
     let serotonin_impact = 0.25 * quality_score * (duration / 7.5).min(1.0);
     impacts.insert("serotonin".to_string(), serotonin_impact);
     
+    // Adjusted to work with circadian baseline system
+    // Good sleep provides modest cortisol reduction (within -0.15 relaxation cap)
+    // Poor sleep increases cortisol, matching 37-45% evening elevation from research
     let cortisol_impact = if quality_score >= 0.7 {
-        -0.2
+        -0.12  // Reduced from -0.2 to stay within relaxation effect cap
     } else {
-        0.15 * (1.0 - quality_score)
+        0.15 * (1.0 - quality_score)  // Poor sleep impact remains same
     };
     impacts.insert("cortisol".to_string(), cortisol_impact);
     
@@ -601,12 +604,14 @@ fn compute_light_impacts(event: &Event, _estimation_time: DateTime<Utc>) -> Hash
     }
     
     if is_morning {
+        // Morning light enhances CAR, but the awakening_boost function already models this
+        // Direct cortisol impact should be modest to avoid double-counting
         let cortisol_impact = if intensity >= 5000.0 {
-            0.2
+            0.08  // Reduced from 0.2
         } else if intensity >= 800.0 {
-            0.15
+            0.05  // Reduced from 0.15
         } else {
-            0.05
+            0.02  // Reduced from 0.05
         };
         impacts.insert("cortisol".to_string(), cortisol_impact);
     }
@@ -697,7 +702,9 @@ fn compute_caffeine_impacts(event: &Event) -> HashMap<String, f64> {
     let norepinephrine_impact = 0.25 * (dose_mg / 200.0).min(1.3);
     impacts.insert("norepinephrine".to_string(), norepinephrine_impact);
     
-    let cortisol_impact = 0.2 * (dose_mg / 200.0).min(1.0);
+    // Reduced from 0.2 to 0.15 to work with circadian baseline + stress sensitivity modulation
+    // Research shows ~50% increase, but this is on top of already-elevated morning baseline
+    let cortisol_impact = 0.15 * (dose_mg / 200.0).min(1.0);
     impacts.insert("cortisol".to_string(), cortisol_impact);
     
     let hours_before_sleep = event.properties.get("hours_before_intended_sleep")
@@ -759,10 +766,12 @@ fn compute_exercise_impacts(event: &Event) -> HashMap<String, f64> {
     let serotonin_boost = 0.2 * (duration_min / 60.0).min(1.0);
     impacts.insert("serotonin".to_string(), serotonin_boost);
     
+    // High-intensity exercise spikes cortisol; moderate exercise reduces it
+    // Adjusted to work with circadian baseline system
     let cortisol_impact = if intensity_pct >= 75.0 && duration_min >= 45.0 {
-        0.3
+        0.2  // Reduced from 0.3 for high-intensity
     } else {
-        -0.1
+        -0.08  // Reduced from -0.1 to work with relaxation cap
     };
     impacts.insert("cortisol".to_string(), cortisol_impact);
     
@@ -818,14 +827,17 @@ fn compute_stress_impacts(event: &Event) -> HashMap<String, f64> {
     
     let mut cortisol_multiplier = 1.0;
     if !controllable {
-        cortisol_multiplier *= 1.5;
+        cortisol_multiplier *= 1.4;  // Reduced from 1.5
     }
     if social_evaluative {
-        cortisol_multiplier *= 1.3;
+        cortisol_multiplier *= 1.25; // Reduced from 1.3
     }
     
-   let cortisol_impact: f64 = 0.4 * intensity_score * cortisol_multiplier;
-   impacts.insert("cortisol".to_string(), cortisol_impact.min(0.8));
+    // Reduced base impact from 0.4 to 0.25 to work with circadian baseline system
+    // The circadian stress sensitivity (0.5-1.0) and awakening boost (1.0-1.75) 
+    // will further modulate this, so the raw impact should be more modest
+    let cortisol_impact: f64 = 0.25 * intensity_score * cortisol_multiplier;
+    impacts.insert("cortisol".to_string(), cortisol_impact.min(0.55));  // Cap at 0.55 instead of 0.8
     
     let norepinephrine_impact = 0.3 * intensity_score;
     impacts.insert("norepinephrine".to_string(), norepinephrine_impact);
@@ -1298,8 +1310,32 @@ impl PrimitiveEstimator {
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
         
-        let final_score = (baseline + accumulated_impact).clamp(0.0, 1.0);
+        let mut final_score = (baseline + accumulated_impact).clamp(0.0, 1.0);
     
+        // Apply cortisol-specific circadian rhythm modulation
+        if primitive == Primitive::Cortisol {
+            let circadian_multiplier = Self::cortisol_circadian_multiplier(estimation_time);
+            let awakening_boost = Self::cortisol_awakening_boost(events, estimation_time);
+            
+            // Circadian rhythm sets the healthy baseline for this time of day
+            // Even a completely stress-free person has cortisol following this rhythm
+            let healthy_baseline = 0.15 + (0.50 * circadian_multiplier);  // Range: 0.15 (night nadir) to 0.65 (morning peak)
+            
+            // Events push cortisol up (stress, caffeine, poor sleep) or slightly down (relaxation, good sleep)
+            // Separate positive (stress) and negative (relaxation) contributions
+            let stress_load = accumulated_impact.max(0.0);
+            let relaxation_effect = accumulated_impact.min(0.0).max(-0.15);  // Cap relaxation reduction at -0.15
+            
+            // Stress response is amplified by:
+            // 1. Awakening boost (CAR effect)
+            // 2. Time of day (easier to spike cortisol during natural peak times)
+            let circadian_stress_sensitivity = 0.5 + (0.5 * circadian_multiplier);  // 0.5-1.0 range
+            let stress_response = stress_load * awakening_boost * circadian_stress_sensitivity;
+            
+            // Final cortisol is the healthy circadian baseline plus event-driven modulation
+            // Stress adds on top, relaxation can reduce slightly but not eliminate the natural rhythm
+            final_score = (healthy_baseline + stress_response + relaxation_effect).clamp(0.15, 1.0);
+        }
         
         (final_score, contributors)
     }
@@ -1610,6 +1646,115 @@ impl PrimitiveEstimator {
     fn exponential_decay(hours_ago: f64, half_life_hours: f64) -> f64 {
         let lambda = 0.693147 / half_life_hours;
         (-lambda * hours_ago).exp()
+    }
+
+    /// Calculate cortisol circadian multiplier based on time of day
+    /// Returns a value between 0.2 (nadir at midnight) and 1.0 (peak in morning)
+    fn cortisol_circadian_multiplier(estimation_time: DateTime<Utc>) -> f64 {
+        let hour_of_day = estimation_time.hour() as f64 + (estimation_time.minute() as f64 / 60.0);
+        
+        // Cortisol follows a well-established circadian rhythm:
+        // - Nadir around midnight (0.2-0.3)
+        // - Rises during late sleep starting around 2-3 AM
+        // - Peaks around 8:30 AM (1.0)
+        // - Gradually declines throughout the day
+        // - Returns to nadir by midnight
+        
+        match hour_of_day {
+            h if h >= 0.0 && h < 2.0 => {
+                // Midnight to 2 AM: at nadir
+                0.25
+            }
+            h if h >= 2.0 && h < 6.0 => {
+                // 2 AM to 6 AM: pre-awakening rise (0.25 -> 0.6)
+                let progress = (h - 2.0) / 4.0;
+                0.25 + (0.35 * progress)
+            }
+            h if h >= 6.0 && h < 9.0 => {
+                // 6 AM to 9 AM: morning peak including CAR (0.6 -> 1.0 -> 0.9)
+                let progress = (h - 6.0) / 3.0;
+                if progress < 0.5 {
+                    // Rising to peak
+                    0.6 + (0.4 * progress * 2.0)
+                } else {
+                    // Just past peak, slight decline
+                    1.0 - (0.1 * (progress - 0.5) * 2.0)
+                }
+            }
+            h if h >= 9.0 && h < 12.0 => {
+                // 9 AM to noon: post-peak decline (0.9 -> 0.7)
+                let progress = (h - 9.0) / 3.0;
+                0.9 - (0.2 * progress)
+            }
+            h if h >= 12.0 && h < 18.0 => {
+                // Noon to 6 PM: afternoon decline (0.7 -> 0.45)
+                let progress = (h - 12.0) / 6.0;
+                0.7 - (0.25 * progress)
+            }
+            h if h >= 18.0 && h < 22.0 => {
+                // 6 PM to 10 PM: evening decline (0.45 -> 0.3)
+                let progress = (h - 18.0) / 4.0;
+                0.45 - (0.15 * progress)
+            }
+            _ => {
+                // 10 PM to midnight: approaching nadir (0.3 -> 0.25)
+                let progress = (hour_of_day - 22.0) / 2.0;
+                0.3 - (0.05 * progress)
+            }
+        }
+    }
+
+    /// Calculate cortisol awakening response (CAR) boost
+    /// Returns a multiplier (1.0 baseline, up to 1.75 for recent wake)
+    fn cortisol_awakening_boost(events: &[Event], estimation_time: DateTime<Utc>) -> f64 {
+        // Find the most recent wake event within the last 2 hours
+        let lookback_time = estimation_time - Duration::hours(2);
+        
+        let mut most_recent_wake: Option<DateTime<Utc>> = None;
+        for event in events.iter().rev() {
+            if event.timestamp < lookback_time {
+                break;
+            }
+            if event.timestamp > estimation_time {
+                continue;
+            }
+            if event.event_type == "wake" {
+                most_recent_wake = Some(event.timestamp);
+                break;
+            }
+        }
+        
+        if let Some(wake_time) = most_recent_wake {
+            let minutes_since_wake = (estimation_time - wake_time).num_minutes() as f64;
+            
+            // Cortisol Awakening Response (CAR):
+            // - Peaks at 30-45 minutes after waking
+            // - Can increase cortisol by 50-75% (we'll use 1.75x multiplier at peak)
+            // - Returns to baseline by 90-120 minutes
+            
+            if minutes_since_wake <= 60.0 {
+                // First hour: rise to peak at 30-40 minutes
+                let peak_time = 35.0; // minutes
+                if minutes_since_wake <= peak_time {
+                    // Rising to peak
+                    1.0 + (0.75 * (minutes_since_wake / peak_time))
+                } else {
+                    // Declining from peak
+                    let decline_progress = (minutes_since_wake - peak_time) / (60.0 - peak_time);
+                    1.75 - (0.35 * decline_progress)
+                }
+            } else if minutes_since_wake <= 120.0 {
+                // Second hour: gradual return to baseline
+                let progress = (minutes_since_wake - 60.0) / 60.0;
+                1.4 - (0.4 * progress)
+            } else {
+                // After 2 hours, CAR effect is gone
+                1.0
+            }
+        } else {
+            // No recent wake event, no CAR boost
+            1.0
+        }
     }
 
     fn compute_sleep_drive(&self, adenosine: f64, circadian_phase: f64, estimation_time: DateTime<Utc>) -> f64 {

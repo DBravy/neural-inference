@@ -65,6 +65,7 @@
             cursor: pointer;
             transition: all 0.3s ease;
             background: #000000;
+            position: relative;
         }
 
         .profile-card:hover {
@@ -108,13 +109,13 @@
 
         .profile-info-icon {
             background: none;
-            border: 2px solid #ffffff;
+            border: 1px solid #ffffff;
             color: #ffffff;
-            width: 22px;
-            height: 22px;
+            width: 20px;
+            height: 20px;
             border-radius: 50%;
             cursor: pointer;
-            font-size: 0.75em;
+            font-size: 0.55em;
             font-weight: bold;
             display: flex;
             align-items: center;
@@ -122,6 +123,9 @@
             transition: all 0.3s ease;
             padding: 0;
             flex-shrink: 0;
+            position: absolute;
+            top: 8px;
+            right: 8px;
         }
 
         .profile-info-icon:hover {
@@ -837,6 +841,12 @@
             border: 2px solid #ffffff;
             background: #000000;
             color: #e0e0e0;
+            font-size: 1.1em;
+        }
+
+        .chat-input-row input[type="text"]::placeholder {
+            font-size: 1.05em;
+            opacity: 0.7;
         }
 
         .chat-input-row input[type="text"]:focus {
@@ -1931,14 +1941,25 @@
             `;
             
             if (profile.schedule && profile.schedule.length > 0) {
-                html += '<h3>Schedule (Most Recent First)</h3>';
-                
-                // Reverse the schedule to show most recent events first
-                const reversedSchedule = [...profile.schedule].reverse();
-                reversedSchedule.forEach((event, idx) => {
-                    const eventHtml = formatScheduleEvent(event);
-                    html += eventHtml;
+                // Filter to only show events up to current time
+                const now = new Date();
+                const pastEvents = profile.schedule.filter(event => {
+                    const eventTime = new Date(event.timestamp);
+                    return eventTime <= now;
                 });
+                
+                if (pastEvents.length > 0) {
+                    html += '<h3>Schedule (Most Recent First)</h3>';
+                    
+                    // Reverse the schedule to show most recent events first
+                    const reversedSchedule = [...pastEvents].reverse();
+                    reversedSchedule.forEach((event, idx) => {
+                        const eventHtml = formatScheduleEvent(event);
+                        html += eventHtml;
+                    });
+                } else {
+                    html += '<p style="color: #909090;">No past events available for this profile.</p>';
+                }
             } else {
                 html += '<p style="color: #909090;">No schedule data available for this profile.</p>';
             }

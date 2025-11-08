@@ -277,7 +277,18 @@ Current time: {}",
     
     // Make API call (rest of the code remains the same)
     let api_key = std::env::var("OPENAI_API_KEY")
-        .expect("OPENAI_API_KEY must be set in environment or .env file");
+        .expect("OPENAI_API_KEY must be set in environment or .env file")
+        .trim()  // Remove any whitespace
+        .to_string();
+    
+    // Debug: Show first and last 10 chars of API key
+    let key_len = api_key.len();
+    let debug_key = if key_len > 20 {
+        format!("{}...{}", &api_key[..10], &api_key[key_len-10..])
+    } else {
+        "[too short]".to_string()
+    };
+    eprintln!("🔑 Using API key: {} (length: {})", debug_key, key_len);
 
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(20))
