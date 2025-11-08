@@ -125,10 +125,17 @@ async fn main() -> std::io::Result<()> {
     // Load environment variables from .env file
     dotenv().ok();
     
+    // Get port from environment variable (Railway) or default to 8080
+    let port = std::env::var("PORT")
+        .unwrap_or_else(|_| "8080".to_string())
+        .parse::<u16>()
+        .expect("PORT must be a valid number");
+    
+    let bind_address = format!("0.0.0.0:{}", port);
+    
     println!("🧠 Neural Primitive Estimator Server");
     println!("=====================================");
-    println!("Starting server at http://localhost:8080");
-    println!("Open your browser and navigate to http://localhost:8080");
+    println!("Starting server at {}", bind_address);
     println!();
     
     HttpServer::new(|| {
@@ -138,7 +145,7 @@ async fn main() -> std::io::Result<()> {
             .route("/api/chat", web::post().to(chat_endpoint))
             .service(fs::Files::new("/", "./static").index_file("index.html"))
     })
-    .bind(("127.0.0.1", 8080))?
+    .bind(&bind_address)?
     .run()
     .await
 }
