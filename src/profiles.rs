@@ -27,7 +27,7 @@ pub fn get_all_profiles() -> Vec<Profile> {
         },
         Profile {
             id: "sleep_deprived".to_string(),
-            name: "Sleep Deprived".to_string(),
+            name: "Finals Week".to_string(),
             description: "Multiple nights of poor sleep with high caffeine use".to_string(),
             schedule: generate_sleep_deprived(base_time, display_days),
         },
