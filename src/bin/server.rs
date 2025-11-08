@@ -120,6 +120,23 @@ async fn chat_endpoint(req: web::Json<ChatRequest>) -> impl Responder {
     }
 }
 
+async fn health_check() -> impl Responder {
+    let cwd = std::env::current_dir()
+        .map(|p| p.to_string_lossy().to_string())
+        .unwrap_or_else(|_| "unknown".to_string());
+    
+    let static_dir = std::env::var("STATIC_DIR").unwrap_or_else(|_| "./static".to_string());
+    let static_exists = std::path::Path::new(&static_dir).exists();
+    
+    HttpResponse::Ok().json(serde_json::json!({
+        "status": "ok",
+        "server": "Neural Primitive Estimator",
+        "cwd": cwd,
+        "static_dir": static_dir,
+        "static_exists": static_exists,
+    }))
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     // Load environment variables from .env file
@@ -133,17 +150,29 @@ async fn main() -> std::io::Result<()> {
     
     let bind_address = format!("0.0.0.0:{}", port);
     
+    // Determine static directory path
+    let static_dir = std::env::var("STATIC_DIR").unwrap_or_else(|_| "./static".to_string());
+    
     println!("🧠 Neural Primitive Estimator Server");
     println!("=====================================");
     println!("Starting server at {}", bind_address);
+    println!("Static files directory: {}", static_dir);
+    println!("Current working directory: {:?}", std::env::current_dir().unwrap());
+    
+    // Check if static directory exists
+    if !std::path::Path::new(&static_dir).exists() {
+        eprintln!("⚠️  WARNING: Static directory '{}' does not exist!", static_dir);
+        eprintln!("    The server will start but static files will not be served.");
+    }
     println!();
     
-    HttpServer::new(|| {
+    HttpServer::new(move || {
         App::new()
+            .route("/health", web::get().to(health_check))
             .route("/api/profiles", web::get().to(get_profiles))
             .route("/api/estimate", web::post().to(estimate_profile))
             .route("/api/chat", web::post().to(chat_endpoint))
-            .service(fs::Files::new("/", "./static").index_file("index.html"))
+            .service(fs::Files::new("/", static_dir.clone()).index_file("index.html"))
     })
     .bind(&bind_address)?
     .run()
