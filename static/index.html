@@ -1,0 +1,2028 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neural Primitive Estimator</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@11.1.0/marked.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #000000;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: #ffffff;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .controls {
+            background: #000000;
+            border: 2px solid #ffffff;
+            border-radius: 0px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: none;
+        }
+
+        .profile-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .profile-card {
+            border: 2px solid #ffffff;
+            border-radius: 0px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #000000;
+        }
+
+        .profile-card:hover {
+            border-color: #ffffff;
+            transform: translateY(-2px);
+            box-shadow: none;
+        }
+
+        .profile-card.selected {
+            border-color: #ffffff;
+            background: #ffffff;
+            box-shadow: none;
+        }
+
+        .profile-card h3 {
+            color: #ffffff;
+            margin-bottom: 8px;
+            font-size: 1.2em;
+        }
+
+        .profile-card.selected h3 {
+            color: #000000;
+        }
+
+        .profile-card p {
+            color: #b0b0b0;
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+
+        .profile-card.selected p {
+            color: #666666;
+        }
+
+        .profile-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .profile-info-icon {
+            background: none;
+            border: 2px solid #ffffff;
+            color: #ffffff;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 0.75em;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            padding: 0;
+            flex-shrink: 0;
+        }
+
+        .profile-info-icon:hover {
+            background: #ffffff;
+            color: #000000;
+            transform: scale(1.1);
+        }
+
+        .profile-card.selected .profile-info-icon {
+            border-color: #000000;
+            color: #000000;
+        }
+
+        .profile-card.selected .profile-info-icon:hover {
+            background: #000000;
+            color: #ffffff;
+        }
+
+        .time-controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .time-controls label {
+            font-weight: 600;
+            color: #e0e0e0;
+        }
+
+        .time-controls input,
+        .time-controls select {
+            padding: 10px;
+            border: 2px solid #ffffff;
+            border-radius: 0px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+            background: #000000;
+            color: #e0e0e0;
+        }
+
+        .time-controls input:focus,
+        .time-controls select:focus {
+            outline: none;
+            border-color: #ffffff;
+        }
+
+        button {
+            background: #ffffff;
+            color: #000000;
+            border: 2px solid #ffffff;
+            padding: 12px 30px;
+            border-radius: 0px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 255, 255, 0.5);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .visualization {
+            background: #000000;
+            border: 2px solid #ffffff;
+            border-radius: 0px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: none;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 500px;
+            margin-bottom: 30px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: #000000;
+            border-radius: 0px;
+            padding: 10px 12px;
+            text-align: center;
+            border: 2px solid #ffffff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 100px;
+        }
+
+        .stat-card h4 {
+            color: #b0b0b0;
+            font-size: 0.8em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #ffffff;
+            margin-bottom: 4px;
+        }
+
+        .stat-description {
+            font-size: 0.8em;
+            color: #909090;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #ffffff;
+            font-size: 1.2em;
+        }
+
+        .spinner {
+            border: 4px solid #333333;
+            border-top: 4px solid #ffffff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #000000;
+            border: 2px solid #ff4444;
+            border-radius: 0px;
+            padding: 15px;
+            color: #ff6666;
+            margin: 20px 0;
+        }
+
+        .legend-item {
+            display: inline-flex;
+            align-items: center;
+            margin-right: 20px;
+            margin-bottom: 10px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 0px;
+            margin-right: 8px;
+        }
+
+        .info-section {
+            background: #000000;
+            border: 2px solid #ffffff;
+            border-radius: 0px;
+            padding: 25px;
+            box-shadow: none;
+        }
+
+        .info-section h2 {
+            color: #ffffff;
+            margin-bottom: 15px;
+        }
+
+        .info-section p {
+            color: #b0b0b0;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .functional-state {
+            background: #000000;
+            border: 2px solid #ffffff;
+            padding: 20px;
+            border-radius: 0px;
+            margin: 20px 0;
+        }
+
+        .functional-state h3 {
+            color: #ffffff;
+            margin-bottom: 10px;
+        }
+
+        .functional-state p {
+            color: #b0b0b0;
+        }
+
+        .recommendations {
+            list-style-type: none;
+            padding-left: 0;
+        }
+
+        .recommendations li {
+            padding: 8px 0 8px 25px;
+            position: relative;
+            color: #b0b0b0;
+        }
+
+        .recommendations li:before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: #ffffff;
+            font-weight: bold;
+        }
+
+        /* Documentation Button and Modal */
+        .doc-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #ffffff;
+            color: #000000;
+            border: 2px solid #ffffff;
+            padding: 12px 24px;
+            border-radius: 0px;
+            font-size: 0.95em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            z-index: 1000;
+        }
+
+        .doc-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 255, 255, 0.5);
+        }
+
+        .doc-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 2000;
+            overflow: auto;
+            padding: 40px 20px;
+        }
+
+        .doc-modal.active {
+            display: block;
+        }
+
+        .doc-content {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #000000;
+            border: 2px solid #ffffff;
+            border-radius: 0px;
+            padding: 40px;
+            color: #e0e0e0;
+            position: relative;
+        }
+
+        .doc-close {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #ffffff;
+            color: #000000;
+            border: 2px solid #ffffff;
+            padding: 8px 16px;
+            border-radius: 0px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+            z-index: 2001;
+        }
+
+        .doc-close:hover {
+            transform: scale(1.05);
+        }
+
+        .doc-content h1 {
+            color: #ffffff;
+            font-size: 2em;
+            margin-bottom: 20px;
+            margin-top: 40px;
+            border-bottom: 2px solid #ffffff;
+            padding-bottom: 10px;
+        }
+
+        .doc-content > h1:first-of-type {
+            margin-top: 60px;
+        }
+
+        .doc-content h2 {
+            color: #ffffff;
+            font-size: 1.5em;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #404040;
+            padding-bottom: 8px;
+        }
+
+        .doc-content h3 {
+            color: #c0c0c0;
+            font-size: 1.2em;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        .doc-content h4 {
+            color: #b0b0b0;
+            font-size: 1em;
+            margin-top: 15px;
+            margin-bottom: 8px;
+        }
+
+        .doc-content p {
+            line-height: 1.7;
+            margin-bottom: 12px;
+            color: #b0b0b0;
+        }
+
+        .doc-content h2 + ul,
+        .doc-content h3 + ul,
+        .doc-content h4 + ul,
+        .doc-content p + ul,
+        .doc-content h2 + ol,
+        .doc-content h3 + ol,
+        .doc-content h4 + ol,
+        .doc-content p + ol {
+            margin-top: 8px;
+        }
+
+        .doc-content ul, .doc-content ol {
+            margin-left: 25px;
+            margin-bottom: 12px;
+            margin-top: 8px;
+            line-height: 1.6;
+            padding-left: 0;
+        }
+
+        .doc-content li {
+            color: #b0b0b0;
+            margin-bottom: 4px;
+            line-height: 1.5;
+        }
+
+        .doc-content li:last-child {
+            margin-bottom: 0;
+        }
+
+        .doc-content ul ul, .doc-content ul ol,
+        .doc-content ol ul, .doc-content ol ol {
+            margin-top: 4px;
+            margin-bottom: 4px;
+        }
+
+        .doc-content code {
+            background: #1a1a1a;
+            color: #ffffff;
+            padding: 2px 6px;
+            border: 1px solid #404040;
+            border-radius: 0px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .doc-content pre {
+            background: #1a1a1a;
+            border: 2px solid #404040;
+            border-radius: 0px;
+            padding: 15px;
+            overflow-x: auto;
+            margin-bottom: 15px;
+            line-height: 1.4;
+            white-space: pre-wrap;
+        }
+
+        .doc-content pre code {
+            background: none;
+            border: none;
+            padding: 0;
+            line-height: 1.4;
+        }
+
+        .doc-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            border: 2px solid #404040;
+        }
+
+        .doc-content th, .doc-content td {
+            padding: 10px;
+            text-align: left;
+            border: 1px solid #404040;
+        }
+
+        .doc-content th {
+            background: #1a1a1a;
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        .doc-content td {
+            color: #b0b0b0;
+        }
+
+        .doc-content strong {
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        .doc-content a {
+            color: #ffffff;
+            text-decoration: underline;
+        }
+
+        .doc-content a:hover {
+            color: #cccccc;
+        }
+
+        /* Chat Button */
+        .chat-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #ffffff;
+            color: #000000;
+            border: 2px solid #ffffff;
+            padding: 16px 32px;
+            border-radius: 0px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.3);
+        }
+
+        .chat-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 255, 255, 0.5);
+        }
+
+        /* Chat Modal */
+        .chat-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 2000;
+            overflow: auto;
+            padding: 40px 20px;
+        }
+
+        .chat-modal.active {
+            display: block;
+        }
+
+        .chat-modal-content {
+            max-width: 900px;
+            height: calc(100vh - 80px);
+            margin: 0 auto;
+            background: #000000;
+            border: 2px solid #ffffff;
+            border-radius: 0px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .chat-modal-header {
+            padding: 20px;
+            border-bottom: 2px solid #ffffff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #000000;
+        }
+
+        .chat-modal-header h2 {
+            color: #ffffff;
+            margin: 0;
+            font-size: 1.5em;
+        }
+
+        .chat-modal-close {
+            background: #ffffff;
+            color: #000000;
+            border: 2px solid #ffffff;
+            padding: 8px 16px;
+            border-radius: 0px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .chat-modal-close:hover {
+            transform: scale(1.05);
+        }
+
+        /* Chat UI */
+        .chat-panel-embedded {
+            display: flex;
+            flex-direction: column;
+            height: 500px;
+            background: #000000;
+            border-radius: 0px;
+            border: 2px solid #ffffff;
+            overflow: hidden;
+        }
+
+        .chat-panel-overlay {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            background: #000000;
+            border-radius: 0px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .chat-messages {
+            padding: 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            flex: 1;
+        }
+
+        .chat-msg {
+            max-width: 80%;
+            padding: 10px 12px;
+            border-radius: 0px;
+            word-wrap: break-word;
+            line-height: 1.4;
+            font-size: 0.95em;
+        }
+
+        .chat-msg.user {
+            align-self: flex-end;
+            background: #ffffff;
+            color: #000000;
+        }
+
+        .chat-msg.assistant {
+            align-self: flex-start;
+            background: #000000;
+            color: #e0e0e0;
+            border: 2px solid #ffffff;
+        }
+
+        .chat-msg.loading {
+            align-self: flex-start;
+            background: #000000;
+            color: #e0e0e0;
+            border: 2px solid #ffffff;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Markdown styling in chat messages */
+        .chat-msg.assistant p {
+            margin-bottom: 0.8em;
+        }
+
+        .chat-msg.assistant p:last-child {
+            margin-bottom: 0;
+        }
+
+        .chat-msg.assistant strong {
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .chat-msg.assistant em {
+            font-style: italic;
+        }
+
+        .chat-msg.assistant code {
+            background: #1a1a1a;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #ffffff;
+            border: 1px solid #333;
+        }
+
+        .chat-msg.assistant pre {
+            background: #1a1a1a;
+            padding: 12px;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin: 8px 0;
+            border: 1px solid #333;
+        }
+
+        .chat-msg.assistant pre code {
+            background: none;
+            padding: 0;
+            border: none;
+            color: #e0e0e0;
+        }
+
+        .chat-msg.assistant ul,
+        .chat-msg.assistant ol {
+            margin-left: 20px;
+            margin-bottom: 0.8em;
+        }
+
+        .chat-msg.assistant li {
+            margin-bottom: 4px;
+        }
+
+        .chat-msg.assistant h1,
+        .chat-msg.assistant h2,
+        .chat-msg.assistant h3,
+        .chat-msg.assistant h4,
+        .chat-msg.assistant h5,
+        .chat-msg.assistant h6 {
+            color: #ffffff;
+            margin: 10px 0 6px 0;
+            font-weight: 600;
+        }
+
+        .chat-msg.assistant blockquote {
+            border-left: 3px solid #ffffff;
+            padding-left: 12px;
+            margin: 8px 0;
+            color: #c0c0c0;
+        }
+
+        .chat-msg.assistant a {
+            color: #ffffff;
+            text-decoration: underline;
+        }
+
+        .chat-msg.assistant a:hover {
+            opacity: 0.8;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+
+        .typing-dots span {
+            width: 8px;
+            height: 8px;
+            background: #ffffff;
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+            0%, 60%, 100% {
+                opacity: 0.3;
+                transform: translateY(0);
+            }
+            30% {
+                opacity: 1;
+                transform: translateY(-5px);
+            }
+        }
+
+        .chat-input-row {
+            padding: 24px;
+            display: flex;
+            gap: 8px;
+            border-top: 2px solid #ffffff;
+            background: #000000;
+        }
+
+        .chat-input-row input[type="text"] {
+            flex: 1;
+            padding: 10px 12px;
+            border-radius: 0px;
+            border: 2px solid #ffffff;
+            background: #000000;
+            color: #e0e0e0;
+        }
+
+        .chat-input-row input[type="text"]:focus {
+            outline: none;
+            border-color: #ffffff;
+        }
+
+        .chat-input-row button {
+            padding: 10px 20px;
+        }
+
+        /* Sample Questions */
+        .sample-questions {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            z-index: 10;
+            backdrop-filter: blur(5px);
+        }
+
+        .sample-questions.hidden {
+            display: none;
+        }
+
+        .sample-questions h3 {
+            color: #ffffff;
+            font-size: 1.3em;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .sample-questions-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .sample-question {
+            background: #000000;
+            border: 2px solid #ffffff;
+            padding: 20px;
+            border-radius: 0px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #e0e0e0;
+            font-size: 1em;
+            line-height: 1.5;
+            text-align: left;
+        }
+
+        .sample-question:hover {
+            border-color: #ffffff;
+            background: #ffffff;
+            color: #000000;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 255, 255, 0.5);
+        }
+
+        .monoamine-levels {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .monoamine-card {
+            background: #000000;
+            border: 2px solid #ffffff;
+            border-radius: 0px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .monoamine-card h4 {
+            color: #b0b0b0;
+            font-size: 0.75em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+        }
+
+        .monoamine-card .value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #ffffff;
+            margin-bottom: 3px;
+        }
+
+        .ratio-display {
+            background: #000000;
+            border: 2px solid #ffffff;
+            border-radius: 0px;
+            padding: 15px;
+            text-align: center;
+            margin-bottom: 12px;
+        }
+
+        .ratio-display h4 {
+            color: #b0b0b0;
+            font-size: 0.8em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .ratio-display .value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #ffffff;
+            margin-bottom: 8px;
+        }
+
+        .interpretation {
+            background: #000000;
+            border: 2px solid #ffffff;
+            border-radius: 0px;
+            padding: 12px;
+            font-size: 0.85em;
+            color: #b0b0b0;
+            line-height: 1.4;
+        }
+
+        /* Schedule Overlay */
+        .schedule-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 3000;
+            overflow: auto;
+            padding: 40px 20px;
+        }
+
+        .schedule-modal.active {
+            display: block;
+        }
+
+        .schedule-content {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #000000;
+            border: 2px solid #ffffff;
+            border-radius: 0px;
+            padding: 30px;
+            color: #e0e0e0;
+            position: relative;
+        }
+
+        .schedule-close {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #ffffff;
+            color: #000000;
+            border: 2px solid #ffffff;
+            padding: 8px 16px;
+            border-radius: 0px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+            z-index: 3001;
+        }
+
+        .schedule-close:hover {
+            transform: scale(1.05);
+        }
+
+        .schedule-content h2 {
+            color: #ffffff;
+            font-size: 1.8em;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #ffffff;
+            padding-bottom: 10px;
+        }
+
+        .schedule-content .profile-description {
+            color: #b0b0b0;
+            margin-bottom: 25px;
+            font-size: 1em;
+            line-height: 1.6;
+        }
+
+        .schedule-content h3 {
+            color: #ffffff;
+            font-size: 1.3em;
+            margin-top: 25px;
+            margin-bottom: 15px;
+        }
+
+        .event-item {
+            background: #000000;
+            border: 2px solid #404040;
+            border-radius: 0px;
+            padding: 15px;
+            margin-bottom: 12px;
+        }
+
+        .event-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .event-type {
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 1em;
+        }
+
+        .event-time {
+            color: #909090;
+            font-size: 0.9em;
+        }
+
+        .event-properties {
+            color: #b0b0b0;
+            font-size: 0.85em;
+            line-height: 1.5;
+        }
+
+        .event-properties strong {
+            color: #c0c0c0;
+        }
+
+        @media (max-width: 1200px) {
+            .state-grid {
+                grid-template-columns: 1fr 1fr !important;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .state-grid {
+                grid-template-columns: 1fr !important;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .chat-button {
+                bottom: 10px;
+                right: 10px;
+                padding: 12px 24px;
+                font-size: 0.9em;
+            }
+
+            .doc-button {
+                top: 10px;
+                right: 10px;
+                padding: 10px 20px;
+                font-size: 0.9em;
+            }
+
+            .chat-modal-content {
+                height: calc(100vh - 40px);
+            }
+
+            .chat-modal {
+                padding: 20px 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="doc-button" onclick="openDocumentation()">View Documentation</button>
+    <button class="chat-button" onclick="openChat()" style="display: none;">Chat with AI</button>
+    
+    <div id="docModal" class="doc-modal" onclick="closeDocumentationOnBackdrop(event)">
+        <div class="doc-content" onclick="event.stopPropagation()">
+            <button class="doc-close" onclick="closeDocumentation()">Close</button>
+            <div id="docText"></div>
+        </div>
+    </div>
+
+    <div id="chatModal" class="chat-modal" onclick="closeChatOnBackdrop(event)">
+        <div class="chat-modal-content" onclick="event.stopPropagation()">
+            <div class="chat-modal-header">
+                <h2>AI Assistant</h2>
+                <button class="chat-modal-close" onclick="closeChat()">Close</button>
+            </div>
+            <div class="chat-panel-overlay">
+                <div id="sample-questions" class="sample-questions">
+                    <h3>How can I help you today?</h3>
+                    <div class="sample-questions-list">
+                        <div class="sample-question" data-question="I have a meeting in a few hours. What can I do to make sure I'm in an optimal state?">
+                            I have a meeting in a few hours. What can I do to make sure I'm in an optimal state?
+                        </div>
+                        <div class="sample-question" data-question="How have things been going lately?">
+                            How have things been going lately?
+                        </div>
+                        <div class="sample-question" data-question="I'm not feeling great right now. Why do you think that is?">
+                            I'm not feeling great right now. Why do you think that is?
+                        </div>
+                    </div>
+                </div>
+                <div id="chat-messages" class="chat-messages"></div>
+                <form id="chat-form" class="chat-input-row">
+                    <input id="chat-input" type="text" placeholder="Ask me about the neural data..." autocomplete="off" />
+                    <button id="chat-send" type="submit">Send</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="scheduleModal" class="schedule-modal" onclick="closeScheduleOnBackdrop(event)">
+        <div class="schedule-content" onclick="event.stopPropagation()">
+            <button class="schedule-close" onclick="closeSchedule()">Close</button>
+            <div id="scheduleDetails"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Neural Primitive Estimator</h1>
+            <p class="subtitle">Explore how neurobiological primitives change over time</p>
+        </header>
+
+        <div class="controls">
+            <h2 style="margin-bottom: 20px; color: #e0e0e0;">Select a Data Profile</h2>
+            <div class="profile-selector" id="profileSelector">
+                <!-- Profiles will be loaded here -->
+            </div>
+
+            <div class="time-controls">
+                <label>Resolution:</label>
+                <select id="resolution">
+                    <option value="1">Every hour</option>
+                    <option value="2">Every 2 hours</option>
+                    <option value="4" selected>Every 4 hours</option>
+                    <option value="6">Every 6 hours</option>
+                </select>
+                
+                <button id="analyzeBtn" onclick="runAnalysis()">Analyze Profile</button>
+            </div>
+        </div>
+
+        <div id="results" style="display: none;">
+            <div class="visualization">
+                <h2 style="margin-bottom: 20px; color: #e0e0e0;">Neural Primitives Over Time</h2>
+                <div class="chart-container">
+                    <canvas id="primitivesChart"></canvas>
+                </div>
+            </div>
+
+            <div class="visualization" style="margin-bottom: 25px;">
+                <h2 style="margin-bottom: 25px; color: #e0e0e0;">Current State Summary</h2>
+                
+                <div class="state-grid" style="display: grid; grid-template-columns: 1fr 350px 350px; gap: 25px;">
+                    <div style="border: 2px solid #404040; padding: 20px; background: #000000;">
+                        <h3 style="margin-bottom: 15px; color: #c0c0c0; font-size: 1em; text-transform: uppercase; letter-spacing: 1px;">Neural Primitives</h3>
+                        <div id="currentState"></div>
+                    </div>
+
+                    <div style="border: 2px solid #404040; padding: 20px; background: #000000;">
+                        <h3 style="margin-bottom: 15px; color: #c0c0c0; font-size: 1em; text-transform: uppercase; letter-spacing: 1px;">DA/5HT Balance</h3>
+                        <div id="monoamineBalance"></div>
+                    </div>
+
+                    <div style="border: 2px solid #404040; padding: 20px; background: #000000;">
+                        <h3 style="margin-bottom: 15px; color: #c0c0c0; font-size: 1em; text-transform: uppercase; letter-spacing: 1px;">Sleep Drive</h3>
+                        <div id="sleepDrive"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-section" style="margin-bottom: 25px;">
+                <h2>Functional State & Recommendations</h2>
+                <div id="functionalState"></div>
+            </div>
+        </div>
+
+        <div id="loading" class="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>Analyzing neural primitives...</p>
+        </div>
+
+        <div id="error" class="error" style="display: none;"></div>
+    </div>
+
+    <script>
+        let profiles = [];
+        let selectedProfile = null;
+        let currentChart = null;
+        let isAnalyzing = false;
+
+        // Primitive colors
+        const primitiveColors = {
+            dopamine: '#FF6384',
+            serotonin: '#36A2EB',
+            norepinephrine: '#FFCE56',
+            adenosine: '#4BC0C0',
+            cortisol: '#9966FF',
+            glucose: '#FF9F40',
+            circadian_phase: '#C9CBCF'
+        };
+
+        // Load profiles on page load
+        window.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const tzOffset = new Date().getTimezoneOffset(); // minutes to add to local to get UTC
+                const response = await fetch(`/api/profiles?tz_offset=${tzOffset}`);
+                profiles = await response.json();
+                renderProfiles();
+            } catch (error) {
+                showError('Failed to load profiles: ' + error.message);
+            }
+        });
+
+        function renderProfiles() {
+            const container = document.getElementById('profileSelector');
+            container.innerHTML = profiles.map((profile, index) => `
+                <div class="profile-card" onclick="selectProfile(${index})">
+                    <div class="profile-header">
+                        <h3 style="margin: 0;">${profile.name}</h3>
+                        <button class="profile-info-icon" onclick="event.stopPropagation(); showSchedule(${index})" title="View Schedule">i</button>
+                    </div>
+                    <p>${profile.description}</p>
+                </div>
+            `).join('');
+        }
+
+        function selectProfile(index) {
+            selectedProfile = profiles[index];
+            
+            // Update UI
+            document.querySelectorAll('.profile-card').forEach((card, i) => {
+                if (i === index) {
+                    card.classList.add('selected');
+                } else {
+                    card.classList.remove('selected');
+                }
+            });
+
+            document.getElementById('analyzeBtn').disabled = false;
+        }
+
+        async function runAnalysis() {
+            if (!selectedProfile) {
+                showError('Please select a profile first');
+                return;
+            }
+
+            if (isAnalyzing) {
+                return; // Prevent multiple simultaneous analyses
+            }
+
+            // Clear the chat and set new profile context when analyzing a new profile
+            if (typeof window.clearChat === 'function') {
+                window.clearChat();
+            }
+            if (typeof window.setChatProfileContext === 'function') {
+                window.setChatProfileContext(selectedProfile.id);
+            }
+
+            isAnalyzing = true;
+            const resolution = parseInt(document.getElementById('resolution').value);
+            
+            // Show loading
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('results').style.display = 'none';
+            document.getElementById('error').style.display = 'none';
+            
+            // Destroy any existing chart
+            if (currentChart) {
+                currentChart.destroy();
+                currentChart = null;
+            }
+
+            try {
+                const response = await fetch('/api/estimate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        profile_id: selectedProfile.id,
+                        resolution_hours: resolution,
+                        timezone_offset_minutes: new Date().getTimezoneOffset()
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to analyze profile');
+                }
+
+                const data = await response.json();
+                displayResults(data);
+            } catch (error) {
+                showError('Analysis failed: ' + error.message);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+                isAnalyzing = false;
+            }
+        }
+
+        function displayResults(data) {
+            document.getElementById('results').style.display = 'block';
+            
+            // Show the Chat with AI button now that analysis is complete
+            const chatButton = document.querySelector('.chat-button');
+            if (chatButton) {
+                chatButton.style.display = 'block';
+            }
+            
+            // Render chart
+            renderChart(data.timeline);
+            
+            // Get the current timestamp from the last timeline point
+            const currentTime = data.timeline.length > 0 ? data.timeline[data.timeline.length - 1].timestamp : new Date().toISOString();
+            
+            // Render current state
+            renderCurrentState(data.final_state);
+            
+            // Render monoamine balance
+            renderMonoamineBalance(data.final_state);
+            
+            // Render sleep drive
+            renderSleepDrive(data.final_state, currentTime);
+            
+            // Render functional state
+            renderFunctionalState(data.final_state);
+        }
+
+        function renderChart(timeline) {
+            // Destroy existing chart first
+            if (currentChart) {
+                currentChart.destroy();
+                currentChart = null;
+            }
+            
+            // Get canvas element and context
+            const canvas = document.getElementById('primitivesChart');
+            const ctx = canvas.getContext('2d');
+
+            // Prepare datasets
+            const primitives = ['dopamine', 'serotonin', 'norepinephrine', 'adenosine', 'cortisol', 'glucose'];
+            const datasets = primitives.map(prim => ({
+                label: prim.charAt(0).toUpperCase() + prim.slice(1),
+                data: timeline.map(point => ({
+                    x: new Date(point.timestamp),
+                    y: point.primitives[prim]
+                })),
+                borderColor: primitiveColors[prim],
+                backgroundColor: primitiveColors[prim] + '20',
+                tension: 0.4,
+                fill: false
+            }));
+
+            const tzName = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Local Time';
+
+            currentChart = new Chart(ctx, {
+                type: 'line',
+                data: { datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'hour',
+                                displayFormats: {
+                                    hour: 'MMM d, HH:mm'
+                                },
+                            },
+                            title: {
+                                display: true,
+                                text: 'Time (' + tzName + ')'
+                            }
+                        },
+                        y: {
+                            min: 0,
+                            max: 1,
+                            title: {
+                                display: true,
+                                text: 'Primitive Score (0-1)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + context.parsed.y.toFixed(3);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderCurrentState(state) {
+            const primitives = state.primitives;
+            const html = `
+                <div class="stats-grid">
+                    ${Object.entries(primitives).map(([name, data]) => {
+                        // Skip dopamine and serotonin - they'll be shown in the balance box
+                        if (name === 'dopamine' || name === 'serotonin') {
+                            return '';
+                        }
+                        // Special handling for circadian phase
+                        if (name === 'circadian_phase') {
+                            const phaseOffset = (data.modified_score - 0.5) * 10;
+                            const phaseOffsetStr = (phaseOffset >= 0 ? '+' : '') + phaseOffset.toFixed(1) + 'h';
+                            return `
+                                <div class="stat-card">
+                                    <h4>${name.replace('_', ' ')}</h4>
+                                    <div class="stat-value">${phaseOffsetStr}</div>
+                                    <div class="stat-description">${getCircadianAlignment(phaseOffset)}</div>
+                                </div>
+                            `;
+                        }
+                        // Regular primitives
+                        return `
+                            <div class="stat-card">
+                                <h4>${name.replace('_', ' ')}</h4>
+                                <div class="stat-value">${data.modified_score.toFixed(3)}</div>
+                                <div class="stat-description">${getDescription(name, data.modified_score)}</div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+            document.getElementById('currentState').innerHTML = html;
+        }
+
+        function renderMonoamineBalance(state) {
+            const dopamine = state.primitives.dopamine;
+            const serotonin = state.primitives.serotonin;
+            const ratio = state.dopamine_serotonin_ratio;
+            
+            // Get effective scores (after reciprocal inhibition) if available, otherwise use modified scores
+            const daScore = dopamine.effective_score !== null && dopamine.effective_score !== undefined 
+                ? dopamine.effective_score 
+                : dopamine.modified_score;
+            const serScore = serotonin.effective_score !== null && serotonin.effective_score !== undefined
+                ? serotonin.effective_score
+                : serotonin.modified_score;
+            
+            const interpretation = getMonoamineInterpretation(daScore, serScore, ratio);
+            
+            const html = `
+                <div class="monoamine-levels">
+                    <div class="monoamine-card">
+                        <h4>Dopamine</h4>
+                        <div class="value" style="color: ${primitiveColors.dopamine};">${daScore.toFixed(3)}</div>
+                        <div style="font-size: 0.75em; color: #909090;">Drive & Motivation</div>
+                    </div>
+                    <div class="monoamine-card">
+                        <h4>Serotonin</h4>
+                        <div class="value" style="color: ${primitiveColors.serotonin};">${serScore.toFixed(3)}</div>
+                        <div style="font-size: 0.75em; color: #909090;">Mood Stability</div>
+                    </div>
+                </div>
+                
+                <div class="ratio-display">
+                    <h4>DA/5HT Ratio</h4>
+                    <div class="value">${ratio.toFixed(2)}</div>
+                </div>
+                
+                <div class="interpretation">
+                    <strong style="color: #ffffff;">${interpretation.state}</strong><br>
+                    ${interpretation.description}
+                </div>
+            `;
+            
+            document.getElementById('monoamineBalance').innerHTML = html;
+        }
+
+        function getMonoamineInterpretation(dopamine, serotonin, ratio) {
+            // Determine state based on ratio AND absolute levels
+            // Reference: doc.md lines 284-295
+            
+            // Peak Performance: Both ≥0.65
+            if (dopamine >= 0.65 && serotonin >= 0.65) {
+                return {
+                    state: "Peak Performance",
+                    description: "High motivation + stable mood. Optimal for challenging tasks."
+                };
+            }
+            
+            // Depleted: Both ≤0.40
+            if (dopamine <= 0.40 && serotonin <= 0.40) {
+                return {
+                    state: "Depleted",
+                    description: "Low motivation + low stability. Recovery time needed."
+                };
+            }
+            
+            // Driven but Anxious: DA ≥0.65, 5HT ≤0.45 OR ratio >1.4
+            if ((dopamine >= 0.65 && serotonin <= 0.45) || ratio > 1.4) {
+                return {
+                    state: "Driven but Anxious",
+                    description: "High drive but reduced stress resilience. Burnout risk."
+                };
+            }
+            
+            // Calm but Unmotivated: DA ≤0.45, 5HT ≥0.65 OR ratio <0.65
+            if ((dopamine <= 0.45 && serotonin >= 0.65) || ratio < 0.65) {
+                return {
+                    state: "Calm but Unmotivated",
+                    description: "Stable mood but reduced initiative and drive."
+                };
+            }
+            
+            // Now check ratio-based balanced states
+            if (ratio >= 1.1 && ratio <= 1.4) {
+                return {
+                    state: "Balanced (DA-leaning)",
+                    description: "Good motivation with reasonable stability."
+                };
+            }
+            
+            if (ratio >= 0.75 && ratio < 0.9) {
+                return {
+                    state: "Balanced (5HT-leaning)",
+                    description: "Stable mood with moderate motivation."
+                };
+            }
+            
+            if (ratio >= 0.9 && ratio < 1.1) {
+                return {
+                    state: "Well-Balanced",
+                    description: "Optimal balance. Flexible and resilient."
+                };
+            }
+            
+            // Default: general balanced state
+            if (ratio >= 0.65 && ratio <= 1.4) {
+                return {
+                    state: "Balanced",
+                    description: "Good balance between drive and stability."
+                };
+            }
+            
+            // Fallback for edge cases
+            if (ratio > 1.4) {
+                return {
+                    state: "Dopamine-Dominant",
+                    description: "High drive but lower mood stability."
+                };
+            } else {
+                return {
+                    state: "Serotonin-Dominant",
+                    description: "Stable mood but lower motivation."
+                };
+            }
+        }
+
+        function renderSleepDrive(state, timestamp) {
+            const timeStr = new Date(timestamp).toLocaleString('en-US', { 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric', 
+                hour: '2-digit', 
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            const html = `
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <p style="color: #b0b0b0; font-size: 0.9em; margin-bottom: 5px;">Current Time</p>
+                    <p style="color: #ffffff; font-size: 0.95em; font-weight: 600;">${timeStr}</p>
+                </div>
+                <div class="stat-card" style="padding: 25px; border: 2px solid #ffffff; border-radius: 0px;">
+                    <div class="stat-value" style="font-size: 2.5em; margin-bottom: 12px;">${state.sleep_drive.toFixed(3)}</div>
+                    <div class="stat-description" style="font-size: 1em;">${getSleepDriveStatus(state.sleep_drive)}</div>
+                </div>
+            `;
+            document.getElementById('sleepDrive').innerHTML = html;
+        }
+
+        function renderFunctionalState(state) {
+            const fs = state.functional_state;
+            const html = `
+                <div class="functional-state">
+                    <h3>${fs.state_type}</h3>
+                    <p>${fs.description}</p>
+                    <h4 style="margin-top: 20px; color: #b0b0b0;">Recommendations:</h4>
+                    <ul class="recommendations">
+                        ${fs.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                    </ul>
+                </div>
+                
+                ${state.physiological_constraints && state.physiological_constraints.length > 0 ? `
+                    <div style="margin-top: 30px;">
+                        <h3 style="color: #e0e0e0; margin-bottom: 15px;">Physiological Validation Adjustments</h3>
+                        ${state.physiological_constraints.map(c => `
+                            <div style="background: #000000; padding: 15px; margin: 10px 0; border-radius: 0px; border: 2px solid #ffffff;">
+                                <strong style="color: #e0e0e0;">${c.constraint_source} → ${c.primitive}</strong><br>
+                                <span style="color: #b0b0b0;">Original: ${c.original_score.toFixed(3)} → Adjusted: ${c.adjusted_score.toFixed(3)}</span><br>
+                                <span style="font-size: 0.9em; color: #909090;">${c.reason}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+            `;
+            document.getElementById('functionalState').innerHTML = html;
+        }
+
+        function getCircadianAlignment(phaseOffsetHours) {
+            const absOffset = Math.abs(phaseOffsetHours);
+            
+            if (absOffset < 0.5) {
+                return 'Naturally Aligned';
+            } else if (absOffset < 1.5) {
+                return phaseOffsetHours > 0 ? 'Phase Delayed' : 'Phase Advanced';
+            } else if (absOffset < 3.0) {
+                return phaseOffsetHours > 0 ? 'Phase Delayed' : 'Phase Advanced';
+            } else {
+                return phaseOffsetHours > 0 ? 'Phase Delayed' : 'Phase Advanced';
+            }
+        }
+
+        function getDescription(primitive, score) {
+            const descriptions = {
+                dopamine: score >= 0.7 ? 'High (good for focus/work)' : score >= 0.5 ? 'Moderate' : score >= 0.3 ? 'Low (may affect motivation)' : 'Very low',
+                serotonin: score >= 0.7 ? 'High (stable mood)' : score >= 0.5 ? 'Moderate' : score >= 0.3 ? 'Low (may affect mood)' : 'Very low',
+                norepinephrine: score >= 0.7 ? 'High (alert)' : score >= 0.5 ? 'Moderate' : score >= 0.3 ? 'Low (reduced alertness)' : 'Very low',
+                adenosine: score >= 0.7 ? 'High (need sleep)' : score >= 0.5 ? 'Moderate' : score >= 0.3 ? 'Low (alert)' : 'Very low',
+                cortisol: score >= 0.7 ? 'High (stressed)' : score >= 0.5 ? 'Moderate' : score >= 0.3 ? 'Low (relaxed)' : 'Very low',
+                glucose: score >= 0.7 ? 'High (good energy)' : score >= 0.5 ? 'Moderate' : score >= 0.3 ? 'Low (may need food)' : 'Very low'
+            };
+            return descriptions[primitive] || score.toFixed(3);
+        }
+
+        function getSleepDriveStatus(score) {
+            if (score >= 0.75) return 'VERY HIGH - Strong urge to sleep';
+            if (score >= 0.6) return 'HIGH - Significant sleep pressure';
+            if (score >= 0.4) return 'MODERATE - Building sleep pressure';
+            return 'LOW - Alert and wakeful';
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        // Documentation Modal Functions
+        let documentationLoaded = false;
+        let documentationContent = '';
+
+        async function loadDocumentation() {
+            if (documentationLoaded) {
+                return documentationContent;
+            }
+
+            try {
+                const response = await fetch('/doc.md');
+                if (!response.ok) {
+                    throw new Error('Failed to load documentation');
+                }
+                const markdown = await response.text();
+                documentationContent = convertMarkdownToHTML(markdown);
+                documentationLoaded = true;
+                return documentationContent;
+            } catch (error) {
+                return '<h1>Error Loading Documentation</h1><p>Unable to load documentation: ' + error.message + '</p>';
+            }
+        }
+
+        function convertMarkdownToHTML(markdown) {
+            let html = markdown;
+            
+            // Extract and protect code blocks first
+            const codeBlocks = [];
+            html = html.replace(/```(\w+)?\n([\s\S]*?)```/g, function(match, lang, code) {
+                const placeholder = '___CODEBLOCK_' + codeBlocks.length + '___';
+                codeBlocks.push(code.trim());
+                return placeholder;
+            });
+            
+            // Escape HTML
+            html = html.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            
+            // Inline code
+            html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+            
+            // Headers
+            html = html.replace(/^#### (.*$)/gm, '<h4>$1</h4>');
+            html = html.replace(/^### (.*$)/gm, '<h3>$1</h3>');
+            html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
+            html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
+            
+            // Bold and italic
+            html = html.replace(/\*\*\*([^\*]+)\*\*\*/g, '<strong><em>$1</em></strong>');
+            html = html.replace(/\*\*([^\*]+)\*\*/g, '<strong>$1</strong>');
+            html = html.replace(/\*([^\*]+)\*/g, '<em>$1</em>');
+            
+            // Links
+            html = html.replace(/\[([^\]]+)\]\(([^\)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+            
+            // Tables (basic support)
+            html = html.replace(/^\|(.+)\|$/gm, function(match) {
+                const cells = match.split('|').filter(cell => cell.trim());
+                const cellTags = cells.map(cell => {
+                    if (cell.trim().match(/^[-:]+$/)) {
+                        return null; // Skip separator rows
+                    }
+                    return '<td>' + cell.trim() + '</td>';
+                }).filter(cell => cell !== null);
+                
+                if (cellTags.length > 0) {
+                    return '<tr>' + cellTags.join('') + '</tr>';
+                }
+                return '';
+            });
+            
+            // Wrap table rows in table tags
+            html = html.replace(/(<tr>.*<\/tr>\n?)+/g, function(match) {
+                // Convert first row to header
+                const rows = match.match(/<tr>.*?<\/tr>/g);
+                if (rows && rows.length > 0) {
+                    const headerRow = rows[0].replace(/<td>/g, '<th>').replace(/<\/td>/g, '</th>');
+                    const bodyRows = rows.slice(1).join('');
+                    return '<table><thead>' + headerRow + '</thead><tbody>' + bodyRows + '</tbody></table>';
+                }
+                return '<table>' + match + '</table>';
+            });
+            
+            // Lists - improved handling
+            // Convert list items but preserve indentation info
+            html = html.replace(/^(\s*)- (.+)$/gm, function(match, indent, content) {
+                const level = Math.floor(indent.length / 2);
+                return '~~~UL' + level + '~~~<li>' + content + '</li>';
+            });
+            html = html.replace(/^(\s*)\d+\. (.+)$/gm, function(match, indent, content) {
+                const level = Math.floor(indent.length / 2);
+                return '~~~OL' + level + '~~~<li>' + content + '</li>';
+            });
+            
+            // Group consecutive list items into lists
+            const lines = html.split('\n');
+            let result = [];
+            let inList = false;
+            let currentListType = null;
+            let currentLevel = 0;
+            
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                const listMatch = line.match(/^~~~(UL|OL)(\d+)~~~(.+)$/);
+                
+                if (listMatch) {
+                    const listType = listMatch[1] === 'UL' ? 'ul' : 'ol';
+                    const level = parseInt(listMatch[2]);
+                    const content = listMatch[3];
+                    
+                    if (!inList || listType !== currentListType || level !== currentLevel) {
+                        if (inList) {
+                            result.push('</' + currentListType + '>');
+                        }
+                        result.push('<' + listType + '>');
+                        currentListType = listType;
+                        currentLevel = level;
+                        inList = true;
+                    }
+                    result.push(content);
+                } else {
+                    if (inList) {
+                        result.push('</' + currentListType + '>');
+                        inList = false;
+                        currentListType = null;
+                    }
+                    result.push(line);
+                }
+            }
+            
+            if (inList) {
+                result.push('</' + currentListType + '>');
+            }
+            
+            html = result.join('\n');
+            
+            // Paragraphs
+            html = html.split('\n\n').map(para => {
+                para = para.trim();
+                if (!para) return '';
+                if (para.startsWith('<h') || para.startsWith('<pre') || 
+                    para.startsWith('<ul') || para.startsWith('<ol') || 
+                    para.startsWith('</ul>') || para.startsWith('</ol>') ||
+                    para.startsWith('<table') || para.startsWith('<li')) {
+                    return para;
+                }
+                // Don't wrap if it contains list tags
+                if (para.includes('<ul>') || para.includes('<ol>') || 
+                    para.includes('<li>') || para.includes('</ul>') || para.includes('</ol>')) {
+                    return para;
+                }
+                return '<p>' + para.replace(/\n/g, '<br>') + '</p>';
+            }).join('\n');
+            
+            // Restore code blocks
+            html = html.replace(/___CODEBLOCK_(\d+)___/g, function(match, index) {
+                const code = codeBlocks[parseInt(index)];
+                return '<pre><code>' + code + '</code></pre>';
+            });
+            
+            return html;
+        }
+
+        async function openDocumentation() {
+            const modal = document.getElementById('docModal');
+            const docText = document.getElementById('docText');
+            
+            // Show modal immediately
+            modal.classList.add('active');
+            
+            // Show loading state
+            docText.innerHTML = '<div style="text-align: center; padding: 40px;"><div class="spinner"></div><p>Loading documentation...</p></div>';
+            
+            // Load documentation
+            const html = await loadDocumentation();
+            docText.innerHTML = html;
+            
+            // Scroll to top
+            modal.scrollTop = 0;
+        }
+
+        function closeDocumentation() {
+            const modal = document.getElementById('docModal');
+            modal.classList.remove('active');
+        }
+
+        function closeDocumentationOnBackdrop(event) {
+            if (event.target.id === 'docModal') {
+                closeDocumentation();
+            }
+        }
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeDocumentation();
+                closeChat();
+                closeSchedule();
+            }
+        });
+
+        // Chat Modal Functions
+        function openChat() {
+            const modal = document.getElementById('chatModal');
+            modal.classList.add('active');
+            // Show sample questions if applicable
+            if (window.resetChatSampleQuestions) {
+                window.resetChatSampleQuestions();
+            }
+        }
+
+        function closeChat() {
+            const modal = document.getElementById('chatModal');
+            modal.classList.remove('active');
+        }
+
+        function closeChatOnBackdrop(event) {
+            if (event.target.id === 'chatModal') {
+                closeChat();
+            }
+        }
+
+        // Schedule Modal Functions
+        function showSchedule(profileIndex) {
+            const profile = profiles[profileIndex];
+            const modal = document.getElementById('scheduleModal');
+            const detailsDiv = document.getElementById('scheduleDetails');
+            
+            // Build schedule HTML
+            let html = `
+                <h2>${profile.name}</h2>
+                <p class="profile-description">${profile.description}</p>
+            `;
+            
+            if (profile.schedule && profile.schedule.length > 0) {
+                html += '<h3>Schedule (Most Recent First)</h3>';
+                
+                // Reverse the schedule to show most recent events first
+                const reversedSchedule = [...profile.schedule].reverse();
+                reversedSchedule.forEach((event, idx) => {
+                    const eventHtml = formatScheduleEvent(event);
+                    html += eventHtml;
+                });
+            } else {
+                html += '<p style="color: #909090;">No schedule data available for this profile.</p>';
+            }
+            
+            detailsDiv.innerHTML = html;
+            modal.classList.add('active');
+            modal.scrollTop = 0;
+        }
+
+        function formatScheduleEvent(event) {
+            let html = '<div class="event-item">';
+            html += '<div class="event-header">';
+            html += `<span class="event-type">${formatEventType(event.event_type)}</span>`;
+            html += `<span class="event-time">${formatTimestamp(event.timestamp)}</span>`;
+            html += '</div>';
+            
+            if (event.end_timestamp) {
+                html += `<div class="event-time" style="margin-bottom: 8px;">End: ${formatTimestamp(event.end_timestamp)}</div>`;
+            }
+            
+            if (event.properties) {
+                html += '<div class="event-properties">';
+                html += formatEventProperties(event.properties);
+                html += '</div>';
+            }
+            
+            html += '</div>';
+            return html;
+        }
+
+        function formatEventType(type) {
+            return type.split('_').map(word => 
+                word.charAt(0).toUpperCase() + word.slice(1)
+            ).join(' ');
+        }
+
+        function formatTimestamp(timestamp) {
+            const date = new Date(timestamp);
+            return date.toLocaleString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+            });
+        }
+
+        function formatEventProperties(properties) {
+            let html = '';
+            const keys = Object.keys(properties).sort();
+            
+            keys.forEach((key, idx) => {
+                const value = properties[key];
+                const formattedKey = key.split('_').map(word => 
+                    word.charAt(0).toUpperCase() + word.slice(1)
+                ).join(' ');
+                
+                if (idx > 0) html += '<br>';
+                html += `<strong>${formattedKey}:</strong> ${formatPropertyValue(value)}`;
+            });
+            
+            return html;
+        }
+
+        function formatPropertyValue(value) {
+            if (typeof value === 'number') {
+                return value % 1 === 0 ? value.toString() : value.toFixed(2);
+            }
+            return value;
+        }
+
+        function closeSchedule() {
+            const modal = document.getElementById('scheduleModal');
+            modal.classList.remove('active');
+        }
+
+        function closeScheduleOnBackdrop(event) {
+            if (event.target.id === 'scheduleModal') {
+                closeSchedule();
+            }
+        }
+    </script>
+    <script src="/chat.js"></script>
+</body>
+</html>
+

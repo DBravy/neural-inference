@@ -1,0 +1,701 @@
+{
+  "user_id": "user_001",
+  "events": [
+    {
+      "event_id": "evt_001",
+      "event_type": "sleep",
+      "timestamp": "2025-01-14T23:00:00Z",
+      "end_timestamp": "2025-01-15T06:30:00Z",
+      "properties": {
+        "duration_hours": 7.5,
+        "quality": "good",
+        "sleep_efficiency": 0.85,
+        "deep_sleep_minutes": 90,
+        "rem_sleep_minutes": 105,
+        "wake_after_sleep_onset_minutes": 20,
+        "sleep_onset_latency_minutes": 15
+      }
+    },
+    {
+      "event_id": "evt_001a",
+      "event_type": "health_blood_oxygen",
+      "timestamp": "2025-01-15T03:00:00Z",
+      "properties": {
+        "value": 96.5,
+        "unit": "%",
+        "context": "during_sleep"
+      }
+    },
+    {
+      "event_id": "evt_002",
+      "event_type": "wake",
+      "timestamp": "2025-01-15T06:30:00Z",
+      "properties": {
+        "natural_wake": true,
+        "ambient_light_lux": 50,
+        "time_of_day": "early_morning"
+      }
+    },
+    {
+      "event_id": "evt_002a",
+      "event_type": "health_heart_rate",
+      "timestamp": "2025-01-15T06:45:00Z",
+      "properties": {
+        "value": 58.0,
+        "unit": "bpm",
+        "context": "resting_post_wake"
+      }
+    },
+    {
+      "event_id": "evt_002b",
+      "event_type": "health_hrv",
+      "timestamp": "2025-01-15T06:45:00Z",
+      "properties": {
+        "value": 72.0,
+        "unit": "ms",
+        "metric": "rmssd",
+        "context": "morning_baseline"
+      }
+    },
+    {
+      "event_id": "evt_003",
+      "event_type": "light_exposure",
+      "timestamp": "2025-01-15T07:00:00Z",
+      "properties": {
+        "intensity_lux": 8000,
+        "duration_minutes": 30,
+        "wavelength": "outdoor",
+        "timing_relative_to_wake_hours": 0.5,
+        "context": "morning_walk"
+      }
+    },
+    {
+      "event_id": "evt_004",
+      "event_type": "meal",
+      "timestamp": "2025-01-15T08:00:00Z",
+      "properties": {
+        "meal_type": "breakfast",
+        "carb_grams": 45,
+        "protein_grams": 25,
+        "fat_grams": 18,
+        "glycemic_index": "medium",
+        "tyrosine_mg": 800,
+        "tryptophan_mg": 180,
+        "protein_percentage": 22,
+        "timing_hours_since_wake": 1.5
+      }
+    },
+    {
+      "event_id": "evt_004a",
+      "event_type": "health_blood_glucose",
+      "timestamp": "2025-01-15T08:15:00Z",
+      "properties": {
+        "value": 88.0,
+        "unit": "mg/dL",
+        "context": "fasting_pre_meal"
+      }
+    },
+    {
+      "event_id": "evt_005",
+      "event_type": "caffeine",
+      "timestamp": "2025-01-15T08:15:00Z",
+      "properties": {
+        "dose_mg": 100,
+        "form": "coffee",
+        "with_food": true,
+        "hours_since_wake": 1.75
+      }
+    },
+    {
+      "event_id": "evt_005a",
+      "event_type": "health_blood_glucose",
+      "timestamp": "2025-01-15T09:30:00Z",
+      "properties": {
+        "value": 115.0,
+        "unit": "mg/dL",
+        "context": "post_meal_90min"
+      }
+    },
+    {
+      "event_id": "evt_006",
+      "event_type": "exercise",
+      "timestamp": "2025-01-15T10:00:00Z",
+      "properties": {
+        "duration_minutes": 45,
+        "intensity": "moderate",
+        "type": "cardio",
+        "heart_rate_avg": 145,
+        "vo2max_percentage": 65,
+        "hours_since_last_meal": 2.0,
+        "time_of_day": "morning"
+      }
+    },
+    {
+      "event_id": "evt_006a",
+      "event_type": "health_heart_rate",
+      "timestamp": "2025-01-15T11:00:00Z",
+      "properties": {
+        "value": 72.0,
+        "unit": "bpm",
+        "context": "post_exercise_recovery"
+      }
+    },
+    {
+      "event_id": "evt_007",
+      "event_type": "meal",
+      "timestamp": "2025-01-15T12:30:00Z",
+      "properties": {
+        "meal_type": "lunch",
+        "carb_grams": 65,
+        "protein_grams": 8,
+        "fat_grams": 12,
+        "glycemic_index": "high",
+        "protein_percentage": 9,
+        "tryptophan_mg": 120,
+        "tyrosine_mg": 200
+      }
+    },
+    {
+      "event_id": "evt_008",
+      "event_type": "caffeine",
+      "timestamp": "2025-01-15T13:00:00Z",
+      "properties": {
+        "dose_mg": 150,
+        "form": "energy_drink",
+        "with_food": false,
+        "hours_before_intended_sleep": 10
+      }
+    },
+    {
+      "event_id": "evt_009",
+      "event_type": "nap",
+      "timestamp": "2025-01-15T14:30:00Z",
+      "properties": {
+        "duration_minutes": 20,
+        "quality": "good",
+        "time_of_day": "afternoon",
+        "hours_since_wake": 8.0
+      }
+    },
+    {
+      "event_id": "evt_010",
+      "event_type": "stress_event",
+      "timestamp": "2025-01-15T15:00:00Z",
+      "properties": {
+        "intensity": "high",
+        "controllable": false,
+        "social_evaluative": true,
+        "duration_minutes": 45,
+        "context": "work_deadline"
+      }
+    },
+    {
+      "event_id": "evt_010a",
+      "event_type": "health_heart_rate",
+      "timestamp": "2025-01-15T15:15:00Z",
+      "properties": {
+        "value": 88.0,
+        "unit": "bpm",
+        "context": "during_stress"
+      }
+    },
+    {
+      "event_id": "evt_010b",
+      "event_type": "health_hrv",
+      "timestamp": "2025-01-15T15:15:00Z",
+      "properties": {
+        "value": 32.0,
+        "unit": "ms",
+        "metric": "rmssd",
+        "context": "during_stress"
+      }
+    },
+    {
+      "event_id": "evt_010c",
+      "event_type": "health_respiratory_rate",
+      "timestamp": "2025-01-15T15:15:00Z",
+      "properties": {
+        "value": 20.0,
+        "unit": "breaths/min",
+        "context": "during_stress"
+      }
+    },
+    {
+      "event_id": "evt_011",
+      "event_type": "social_interaction",
+      "timestamp": "2025-01-15T18:00:00Z",
+      "properties": {
+        "duration_minutes": 90,
+        "quality": "positive",
+        "interaction_type": "reciprocal",
+        "novelty": "familiar",
+        "context": "dinner_with_friends"
+      }
+    },
+    {
+      "event_id": "evt_011a",
+      "event_type": "health_heart_rate",
+      "timestamp": "2025-01-15T18:30:00Z",
+      "properties": {
+        "value": 68.0,
+        "unit": "bpm",
+        "context": "social_relaxed"
+      }
+    },
+    {
+      "event_id": "evt_012",
+      "event_type": "meal",
+      "timestamp": "2025-01-15T19:00:00Z",
+      "properties": {
+        "meal_type": "dinner",
+        "carb_grams": 80,
+        "protein_grams": 4,
+        "fat_grams": 15,
+        "glycemic_index": "high",
+        "protein_percentage": 4,
+        "tryptophan_mg": 200,
+        "tyrosine_mg": 100,
+        "hours_before_sleep": 4
+      }
+    },
+    {
+      "event_id": "evt_013",
+      "event_type": "light_exposure",
+      "timestamp": "2025-01-15T19:30:00Z",
+      "properties": {
+        "intensity_lux": 2000,
+        "duration_minutes": 60,
+        "wavelength": "outdoor",
+        "timing_relative_to_sleep": "evening",
+        "hours_before_sleep": 3.5
+      }
+    },
+    {
+      "event_id": "evt_013a",
+      "event_type": "health_body_temperature",
+      "timestamp": "2025-01-15T21:00:00Z",
+      "properties": {
+        "value": 37.1,
+        "unit": "celsius",
+        "context": "evening"
+      }
+    },
+    {
+      "event_id": "evt_014",
+      "event_type": "screen_time",
+      "timestamp": "2025-01-15T21:30:00Z",
+      "properties": {
+        "duration_minutes": 90,
+        "device": "phone",
+        "content_type": "social_media",
+        "blue_light_intensity": "high",
+        "hours_before_sleep": 1.5
+      }
+    },
+    {
+      "event_id": "evt_015",
+      "event_type": "sleep",
+      "timestamp": "2025-01-15T23:00:00Z",
+      "end_timestamp": "2025-01-16T05:00:00Z",
+      "properties": {
+        "duration_hours": 6.0,
+        "quality": "poor",
+        "sleep_efficiency": 0.65,
+        "deep_sleep_minutes": 45,
+        "rem_sleep_minutes": 60,
+        "wake_after_sleep_onset_minutes": 45,
+        "sleep_onset_latency_minutes": 35
+      }
+    },
+    {
+      "event_id": "evt_015a",
+      "event_type": "health_blood_oxygen",
+      "timestamp": "2025-01-16T02:00:00Z",
+      "properties": {
+        "value": 91.0,
+        "unit": "%",
+        "context": "during_sleep_low"
+      }
+    },
+    {
+      "event_id": "evt_015b",
+      "event_type": "health_heart_rate",
+      "timestamp": "2025-01-16T03:00:00Z",
+      "properties": {
+        "value": 62.0,
+        "unit": "bpm",
+        "context": "during_sleep"
+      }
+    },
+    {
+      "event_id": "evt_016",
+      "event_type": "wake",
+      "timestamp": "2025-01-16T05:00:00Z",
+      "properties": {
+        "natural_wake": false,
+        "alarm": true,
+        "ambient_light_lux": 0,
+        "time_of_day": "early_morning"
+      }
+    },
+    {
+      "event_id": "evt_016a",
+      "event_type": "health_hrv",
+      "timestamp": "2025-01-16T05:15:00Z",
+      "properties": {
+        "value": 38.0,
+        "unit": "ms",
+        "metric": "rmssd",
+        "context": "morning_post_poor_sleep"
+      }
+    },
+    {
+      "event_id": "evt_016b",
+      "event_type": "health_heart_rate",
+      "timestamp": "2025-01-16T05:15:00Z",
+      "properties": {
+        "value": 72.0,
+        "unit": "bpm",
+        "context": "morning_elevated_post_poor_sleep"
+      }
+    },
+    {
+      "event_id": "evt_017",
+      "event_type": "caffeine",
+      "timestamp": "2025-01-16T05:30:00Z",
+      "properties": {
+        "dose_mg": 200,
+        "form": "coffee",
+        "with_food": false,
+        "hours_since_wake": 0.5
+      }
+    },
+    {
+      "event_id": "evt_017a",
+      "event_type": "health_blood_glucose",
+      "timestamp": "2025-01-16T06:00:00Z",
+      "properties": {
+        "value": 68.0,
+        "unit": "mg/dL",
+        "context": "fasting_low"
+      }
+    },
+    {
+      "event_id": "evt_018",
+      "event_type": "meal",
+      "timestamp": "2025-01-16T07:00:00Z",
+      "properties": {
+        "meal_type": "breakfast",
+        "carb_grams": 30,
+        "protein_grams": 35,
+        "fat_grams": 20,
+        "glycemic_index": "low",
+        "protein_percentage": 41,
+        "tyrosine_mg": 1200,
+        "tryptophan_mg": 150
+      }
+    },
+    {
+      "event_id": "evt_019",
+      "event_type": "stress_event",
+      "timestamp": "2025-01-16T09:00:00Z",
+      "properties": {
+        "intensity": "moderate",
+        "controllable": true,
+        "social_evaluative": false,
+        "duration_minutes": 30,
+        "context": "problem_solving"
+      }
+    },
+    {
+      "event_id": "evt_020",
+      "event_type": "interruption",
+      "timestamp": "2025-01-16T10:00:00Z",
+      "properties": {
+        "frequency": 5,
+        "total_disruption_minutes": 25,
+        "context": "work_notifications"
+      }
+    },
+    {
+      "event_id": "evt_020a",
+      "event_type": "health_heart_rate",
+      "timestamp": "2025-01-16T12:00:00Z",
+      "properties": {
+        "value": 78.0,
+        "unit": "bpm",
+        "context": "midday_elevated"
+      }
+    },
+    {
+      "event_id": "evt_020b",
+      "event_type": "health_hrv",
+      "timestamp": "2025-01-16T12:00:00Z",
+      "properties": {
+        "value": 42.0,
+        "unit": "ms",
+        "metric": "rmssd",
+        "context": "midday_reduced"
+      }
+    },
+    {
+      "event_id": "evt_021",
+      "event_type": "exercise",
+      "timestamp": "2025-01-16T17:00:00Z",
+      "properties": {
+        "duration_minutes": 60,
+        "intensity": "high_intensity",
+        "type": "hiit",
+        "heart_rate_avg": 165,
+        "vo2max_percentage": 85,
+        "hours_since_last_meal": 3.0,
+        "time_of_day": "evening"
+      }
+    },
+    {
+      "event_id": "evt_021a",
+      "event_type": "health_heart_rate",
+      "timestamp": "2025-01-16T18:15:00Z",
+      "properties": {
+        "value": 82.0,
+        "unit": "bpm",
+        "context": "post_hiit_recovery"
+      }
+    },
+    {
+      "event_id": "evt_022",
+      "event_type": "sleep",
+      "timestamp": "2025-01-16T23:30:00Z",
+      "end_timestamp": "2025-01-17T05:30:00Z",
+      "properties": {
+        "duration_hours": 6.0,
+        "quality": "poor",
+        "sleep_efficiency": 0.62,
+        "deep_sleep_minutes": 40,
+        "rem_sleep_minutes": 55,
+        "wake_after_sleep_onset_minutes": 50,
+        "sleep_onset_latency_minutes": 40
+      }
+    },
+    {
+      "event_id": "evt_022a",
+      "event_type": "health_blood_oxygen",
+      "timestamp": "2025-01-17T02:00:00Z",
+      "properties": {
+        "value": 90.5,
+        "unit": "%",
+        "context": "during_sleep_low"
+      }
+    },
+    {
+      "event_id": "evt_023",
+      "event_type": "wake",
+      "timestamp": "2025-01-17T05:30:00Z",
+      "properties": {
+        "natural_wake": false,
+        "alarm": true,
+        "ambient_light_lux": 0,
+        "time_of_day": "early_morning"
+      }
+    },
+    {
+      "event_id": "evt_023a",
+      "event_type": "health_hrv",
+      "timestamp": "2025-01-17T05:45:00Z",
+      "properties": {
+        "value": 28.0,
+        "unit": "ms",
+        "metric": "rmssd",
+        "context": "morning_very_low_cumulative_sleep_debt"
+      }
+    },
+    {
+      "event_id": "evt_023b",
+      "event_type": "health_heart_rate",
+      "timestamp": "2025-01-17T05:45:00Z",
+      "properties": {
+        "value": 76.0,
+        "unit": "bpm",
+        "context": "morning_elevated_sleep_debt"
+      }
+    },
+    {
+      "event_id": "evt_024",
+      "event_type": "caffeine",
+      "timestamp": "2025-01-17T06:00:00Z",
+      "properties": {
+        "dose_mg": 150,
+        "form": "coffee",
+        "with_food": false,
+        "hours_since_wake": 0.5
+      }
+    },
+    {
+      "event_id": "evt_024a",
+      "event_type": "health_blood_glucose",
+      "timestamp": "2025-01-17T06:15:00Z",
+      "properties": {
+        "value": 65.0,
+        "unit": "mg/dL",
+        "context": "fasting_hypoglycemic"
+      }
+    },
+    {
+      "event_id": "evt_024b",
+      "event_type": "health_respiratory_rate",
+      "timestamp": "2025-01-17T06:30:00Z",
+      "properties": {
+        "value": 19.0,
+        "unit": "breaths/min",
+        "context": "morning_stress_response"
+      }
+    },
+    {
+      "event_id": "evt_025",
+      "event_type": "meal",
+      "timestamp": "2025-01-17T08:00:00Z",
+      "properties": {
+        "meal_type": "breakfast",
+        "carb_grams": 50,
+        "protein_grams": 15,
+        "fat_grams": 12,
+        "glycemic_index": "medium",
+        "protein_percentage": 19,
+        "tyrosine_mg": 600,
+        "tryptophan_mg": 160
+      }
+    },
+    {
+      "event_id": "evt_025a",
+      "event_type": "health_steps",
+      "timestamp": "2025-01-17T08:00:00Z",
+      "properties": {
+        "value": 1500.0,
+        "unit": "steps",
+        "context": "low_activity_past_24h"
+      }
+    },
+    {
+      "event_id": "evt_026",
+      "event_type": "social_interaction",
+      "timestamp": "2025-01-17T12:00:00Z",
+      "properties": {
+        "duration_minutes": 30,
+        "quality": "neutral",
+        "interaction_type": "unilateral",
+        "novelty": "familiar",
+        "context": "work_meeting"
+      }
+    },
+    {
+      "event_id": "evt_026a",
+      "event_type": "health_heart_rate",
+      "timestamp": "2025-01-17T14:00:00Z",
+      "properties": {
+        "value": 84.0,
+        "unit": "bpm",
+        "context": "afternoon_persistently_elevated"
+      }
+    },
+    {
+      "event_id": "evt_026b",
+      "event_type": "health_hrv",
+      "timestamp": "2025-01-17T14:00:00Z",
+      "properties": {
+        "value": 26.0,
+        "unit": "ms",
+        "metric": "rmssd",
+        "context": "afternoon_very_suppressed"
+      }
+    },
+    {
+      "event_id": "evt_027",
+      "event_type": "screen_time",
+      "timestamp": "2025-01-17T21:00:00Z",
+      "properties": {
+        "duration_minutes": 120,
+        "device": "computer",
+        "content_type": "gaming",
+        "blue_light_intensity": "high",
+        "hours_before_sleep": 2.0
+      }
+    },
+    {
+      "event_id": "evt_028",
+      "event_type": "caffeine",
+      "timestamp": "2025-01-17T21:30:00Z",
+      "properties": {
+        "dose_mg": 80,
+        "form": "tea",
+        "with_food": false,
+        "hours_before_intended_sleep": 1.5
+      }
+    },
+    {
+      "event_id": "evt_029",
+      "event_type": "sleep",
+      "timestamp": "2025-01-17T23:00:00Z",
+      "end_timestamp": "2025-01-18T06:00:00Z",
+      "properties": {
+        "duration_hours": 7.0,
+        "quality": "fair",
+        "sleep_efficiency": 0.75,
+        "deep_sleep_minutes": 70,
+        "rem_sleep_minutes": 85,
+        "wake_after_sleep_onset_minutes": 30,
+        "sleep_onset_latency_minutes": 25
+      }
+    },
+    {
+      "event_id": "evt_029a",
+      "event_type": "health_blood_oxygen",
+      "timestamp": "2025-01-18T03:00:00Z",
+      "properties": {
+        "value": 94.0,
+        "unit": "%",
+        "context": "during_sleep_improved"
+      }
+    },
+    {
+      "event_id": "evt_030",
+      "event_type": "wake",
+      "timestamp": "2025-01-18T06:00:00Z",
+      "properties": {
+        "natural_wake": true,
+        "ambient_light_lux": 100,
+        "time_of_day": "early_morning"
+      }
+    },
+    {
+      "event_id": "evt_030a",
+      "event_type": "health_hrv",
+      "timestamp": "2025-01-18T06:15:00Z",
+      "properties": {
+        "value": 52.0,
+        "unit": "ms",
+        "metric": "rmssd",
+        "context": "morning_recovering"
+      }
+    },
+    {
+      "event_id": "evt_030b",
+      "event_type": "health_heart_rate",
+      "timestamp": "2025-01-18T06:15:00Z",
+      "properties": {
+        "value": 64.0,
+        "unit": "bpm",
+        "context": "morning_improving"
+      }
+    },
+    {
+      "event_id": "evt_030c",
+      "event_type": "health_blood_glucose",
+      "timestamp": "2025-01-18T06:30:00Z",
+      "properties": {
+        "value": 82.0,
+        "unit": "mg/dL",
+        "context": "fasting_normal"
+      }
+    }
+  ]
+}
