@@ -54,7 +54,19 @@
             item.textContent = content;
         }
         state.elements.messages.appendChild(item);
-        state.elements.messages.scrollTop = state.elements.messages.scrollHeight;
+        
+        // Auto-scroll only for user messages so they can see their message
+        if (role === 'user') {
+            state.elements.messages.scrollTop = state.elements.messages.scrollHeight;
+        } else if (role === 'assistant') {
+            // For assistant messages, scroll to show the user's most recent message at the top
+            // Find the last user message (should be right before this assistant message)
+            const userMessages = state.elements.messages.querySelectorAll('.chat-msg.user');
+            if (userMessages.length > 0) {
+                const lastUserMessage = userMessages[userMessages.length - 1];
+                lastUserMessage.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
     }
 
     function showLoadingIndicator() {
@@ -69,6 +81,7 @@
             </div>
         `;
         state.elements.messages.appendChild(loadingDiv);
+        // Scroll to show the loading indicator
         state.elements.messages.scrollTop = state.elements.messages.scrollHeight;
     }
 
