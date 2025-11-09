@@ -234,7 +234,11 @@ fn interpret_primitive_score(primitive: &str, score: f64) -> &'static str {
 pub async fn chat_reply(req: ChatRequest) -> Result<ChatResponse, String> {
     // Get event data based on profile_id or default to "healthy"
     let profile_id = req.profile_id.as_deref().unwrap_or("healthy");
-    let event_data = crate::generate_profile_events(profile_id, 7);
+    // Use the same event generation window as the display endpoint (11 days total)
+    // to ensure consistent neural primitive calculations
+    let display_days: i64 = 4;
+    let padding_days_before: i64 = 7; // matches max ContextConfig window (168h)
+    let event_data = crate::generate_profile_events(profile_id, display_days + padding_days_before);
     
     // Run the estimator to get current state
     let estimator = PrimitiveEstimator::new();
