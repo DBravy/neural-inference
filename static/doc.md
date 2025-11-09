@@ -2,7 +2,7 @@
 
 ## Overview
 
-This system estimates 7 neurobiological primitives (dopamine, serotonin, norepinephrine, adenosine, cortisol, glucose, circadian phase) by **deriving their values from activity data using peer-reviewed neuroscience research**.
+This system estimates 7 neurobiological primitives (dopamine, serotonin, norepinephrine, adenosine, cortisol, glucose, circadian alignment) by **deriving their values from activity data using peer-reviewed neuroscience research**.
 
 ## Research-Based Impact Functions
 
@@ -186,31 +186,24 @@ a2a_occupancy = plasma_conc / (plasma_conc + 65.0)
 blockade = 0.5 × a2a_occupancy
 ```
 
-### Circadian Phase (Process C - Time-of-Day Regulation)
-**Special handling**: Tracks phase offset, not quality
+### Circadian Alignment (Process C - Sleep-Wake Schedule Quality)
+**Special handling**: Multi-component scoring measuring alignment with optimal biological windows
 
 **Score interpretation**:
-- 0.5 = Baseline phase (on schedule)
-- <0.5 = Phase advanced (earlier)
-- >0.5 = Phase delayed (later)
-- Range: Typically 0.3-0.7 (±3 hours)
+- 1.0 = Excellent alignment (waking 6-8 AM, adequate sleep, consistent)
+- 0.8-0.9 = Good alignment (minor suboptimal elements)
+- 0.6-0.7 = Fair alignment (late wake OR insufficient sleep OR inconsistent)
+- <0.6 = Poor alignment (multiple issues: late wake + insufficient/inconsistent sleep)
 
-**Algorithm**:
-1. Aggregate phase-shifting events over 7 days
-2. Apply exponential decay (72h half-life)
-3. Each event contributes a signed phase offset:
-   - Morning light (6-11am, ≥2000 lux): -0.8h (advance)
-   - Evening light (6-10pm, ≥2000 lux): +0.6h (delay)
-   - Late screens (<3h before sleep): +0.3-0.6h (delay)
-   - Morning exercise: -0.3h (advance)
-   - Late sleep (past midnight): +0.2h (delay)
-4. Add natural drift if no morning light: +0.4h
-5. Apply adenosine gating to light sensitivity:
-   - Adenosine >0.7: 50% light sensitivity (sleep-deprived)
-   - Adenosine 0.5-0.7: 75% sensitivity
-   - Adenosine <0.5: 100% sensitivity
+**Four Components**:
+1. **Wake Time Alignment (40% weight)**: Optimal 6-8 AM window captures cortisol awakening response, morning light entrainment, and neurotransmitter production timing
+2. **Sleep Adequacy (30% weight)**: 7.5-9 hours optimal; penalties for <7h or >9.5h
+3. **Consistency (20% weight)**: Low wake time variability (std dev <0.5h → 0.95, >3h → <0.4)
+4. **Bedtime Appropriateness (10% weight)**: Does bedtime allow adequate sleep before wake time?
 
-**Adenosine gating mechanism**: High homeostatic sleep pressure attenuates light-induced phase shifts through adenosinergic inhibition of SCN photic pathways.
+**Light exposure adjustments**: Morning/evening light can modestly improve/worsen alignment score (±15% impact)
+
+**Why this matters**: Late wake (>9 AM) misses critical morning neurotransmitter windows regardless of sleep duration. Athlete sleeping 10 PM-6:30 AM scores higher (0.96) than late sleeper at 11 PM-9 AM (0.76) despite similar sleep duration.
 
 ### Sleep Drive (Two-Process Model)
 **Formula**: `Sleep Drive = 0.6 × Adenosine + 0.4 × Circadian_Component`
@@ -330,7 +323,6 @@ if dopamine > 0.7 {
 **Functional states** (determined by ratio AND absolute levels):
 
 | State | Conditions | Characteristics |
-|-------|------------|-----------------|
 | **Peak Performance** | Both ≥0.65 | High motivation + stable mood |
 | **Depleted** | Both ≤0.40 | Low motivation + low stability, need recovery |
 | **Driven but Anxious** | DA ≥0.65, 5HT ≤0.45 OR ratio >1.4 | High drive, reduced stress resilience, burnout risk |
@@ -387,7 +379,7 @@ Second-pass adjustments based on primitive interactions:
 | Condition | Effect | Magnitude | Research Basis |
 | Circadian misaligned (<0.35 or >0.65) | Suppresses all neurotransmitters | 0.85× | Phase >1h off impairs function |
 | Glucose <0.4 | Impairs all brain function | 0.70× | Hypoglycemia effects |
-| Adenosine >0.7 | Specifically impairs dopamine | 0.7-1.0× | A2A-D2 receptor heteromers |
+| Adenosine >0.5 | Specifically impairs dopamine | Non-linear (squared): -1.2×(A-0.5)² | A2A-D2 receptor heteromers; sleep deprivation downregulates D2 |
 | Cortisol >0.7 | Suppresses dopamine & serotonin | 0.85× | Chronic stress studies |
 
 ## Physiological Validation Layer
@@ -426,7 +418,7 @@ Each primitive has biologically-appropriate windows:
 | Cortisol | 48h | 12h | Acute + chronic stress; circadian-modulated |
 | Dopamine | 72h | 24h | Lifestyle patterns |
 | Serotonin | 96h | 36h | Mood stability |
-| Circadian Phase | 168h | 72h | Weekly entrainment |
+| Circadian Alignment | 168h | 72h | Weekly sleep-wake patterns |
 
 **Exponential decay formula**: `e^(-0.693 × hours_ago / half_life)`
 
@@ -473,11 +465,13 @@ Events contain only **activity metadata**, not impacts:
    - Track wake time, apply accumulation formula
    - Subtract sleep clearance (past events)
    - Subtract caffeine blockade (plasma tracking)
-3. Compute Circadian Phase (Process C):
-   - Aggregate phase-shifting events (7 days)
-   - Apply adenosine gating to light sensitivity
-   - Apply exponential decay
-   - Convert to phase score (0.3-0.7)
+3. Compute Circadian Alignment (Process C):
+   - Calculate wake time score (optimal 6-8 AM window)
+   - Calculate sleep adequacy score (7.5-9h optimal)
+   - Calculate consistency score (wake time variability)
+   - Calculate bedtime appropriateness (supports adequate sleep?)
+   - Apply light exposure adjustments
+   - Combine weighted components (0.0-1.0)
 4. Compute Sleep Drive:
    - Combine: 0.6 × adenosine + 0.4 × circadian_sleep_propensity
 5. For each remaining primitive:

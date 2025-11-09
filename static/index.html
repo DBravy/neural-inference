@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Neural Primitive Estimator</title>
+    <title>Neural Inference</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked@11.1.0/marked.min.js"></script>
@@ -26,15 +26,27 @@
             margin: 0 auto;
         }
 
+        .top-nav-buttons {
+            position: relative;
+            width: 100%;
+            height: 0;
+            margin-bottom: 0;
+        }
+
         header {
             text-align: center;
             color: #ffffff;
             margin-bottom: 30px;
+            position: relative;
+            padding-top: 20px;
         }
 
         h1 {
             font-size: 2.5em;
-            margin-bottom: 10px;
+            margin-bottom: 0px;
+            font-weight: 450;
+            font-family: 'Georgia', serif;
+            display: inline-block;
         }
 
         .subtitle {
@@ -959,6 +971,10 @@
             text-transform: uppercase;
             letter-spacing: 0.5px;
             margin-bottom: 5px;
+            min-height: 2.5em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .monoamine-card .value {
@@ -966,6 +982,10 @@
             font-weight: bold;
             color: #ffffff;
             margin-bottom: 3px;
+            min-height: 1.5em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .ratio-display {
@@ -1122,24 +1142,126 @@
         }
 
         @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .top-nav-buttons {
+                height: auto;
+                margin-bottom: 15px;
+                display: flex;
+                gap: 10px;
+                justify-content: space-between;
+            }
+
+            /* Move buttons to top on mobile */
+            .github-button {
+                position: static;
+                display: block;
+                flex: 1;
+                margin: 0;
+                padding: 10px 16px;
+                font-size: 0.85em;
+                text-align: center;
+            }
+
+            .doc-button {
+                position: static;
+                display: block;
+                flex: 1;
+                margin: 0;
+                padding: 10px 16px;
+                font-size: 0.85em;
+            }
+
+            header {
+                margin-bottom: 20px;
+                padding-top: 10px;
+            }
+
+            h1 {
+                font-size: 1.8em;
+                margin-bottom: 5px;
+            }
+
+            .subtitle {
+                font-size: 1em;
+            }
+
+            .controls {
+                padding: 15px;
+            }
+
+            .profile-selector {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+
+            .profile-card {
+                padding: 15px;
+            }
+
+            .time-controls {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 10px;
+            }
+
+            .time-controls label {
+                font-size: 0.95em;
+            }
+
+            .time-controls select,
+            .time-controls button {
+                width: 100%;
+                padding: 12px;
+            }
+
+            button {
+                padding: 12px 20px;
+                font-size: 0.95em;
+            }
+
+            .visualization {
+                padding: 15px;
+            }
+
+            .chart-container {
+                height: 300px;
+                margin-bottom: 20px;
+            }
+
+            .state-grid {
+                grid-template-columns: 1fr !important;
+                gap: 15px;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+                gap: 10px;
+            }
+
+            .stat-card {
+                min-height: 80px;
+                padding: 8px 10px;
+            }
+
+            .stat-value {
+                font-size: 1.1em;
+            }
+
+            .info-section {
+                padding: 15px;
+            }
+
+            .functional-state {
+                padding: 15px;
+            }
+
             .chat-button {
                 bottom: 10px;
                 right: 10px;
                 padding: 12px 24px;
-                font-size: 0.9em;
-            }
-
-            .github-button {
-                top: 10px;
-                left: 10px;
-                padding: 10px 20px;
-                font-size: 0.9em;
-            }
-
-            .doc-button {
-                top: 10px;
-                right: 10px;
-                padding: 10px 20px;
                 font-size: 0.9em;
             }
 
@@ -1150,12 +1272,103 @@
             .chat-modal {
                 padding: 20px 10px;
             }
+
+            .chat-msg {
+                max-width: 90%;
+                font-size: 0.9em;
+            }
+
+            .chat-input-row {
+                padding: 12px;
+            }
+
+            .chat-input-row input[type="text"] {
+                font-size: 1em;
+            }
+
+            .sample-questions {
+                padding: 20px;
+            }
+
+            .sample-questions h3 {
+                font-size: 1.1em;
+            }
+
+            .sample-question {
+                padding: 15px;
+                font-size: 0.95em;
+            }
+
+            .doc-modal {
+                padding: 20px 10px;
+            }
+
+            .doc-content {
+                padding: 20px;
+            }
+
+            .doc-close,
+            .schedule-close {
+                top: 10px;
+                right: 10px;
+                padding: 6px 12px;
+                font-size: 0.9em;
+            }
+
+            .schedule-content {
+                padding: 20px;
+            }
+
+            .event-item {
+                padding: 12px;
+            }
+
+            .monoamine-levels {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.5em;
+            }
+
+            .top-nav-buttons {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .github-button,
+            .doc-button {
+                width: 100%;
+                margin: 0;
+            }
+
+            .controls h2,
+            .visualization h2,
+            .info-section h2 {
+                font-size: 1.2em;
+            }
+
+            .profile-card h3 {
+                font-size: 1.1em;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .chart-container {
+                height: 250px;
+            }
         }
     </style>
 </head>
 <body>
-    <a href="https://github.com/DBravy/neural-inference" class="github-button" target="_blank" rel="noopener noreferrer">GitHub</a>
-    <button class="doc-button" onclick="openDocumentation()">View Documentation</button>
+    <div class="top-nav-buttons">
+        <a href="https://github.com/DBravy/neural-inference" class="github-button" target="_blank" rel="noopener noreferrer">GitHub</a>
+        <button class="doc-button" onclick="openDocumentation()">View Documentation</button>
+    </div>
     <button class="chat-button" onclick="openChat()" style="display: none;">Chat with AI</button>
     
     <div id="docModal" class="doc-modal" onclick="closeDocumentationOnBackdrop(event)">
@@ -1204,8 +1417,8 @@
 
     <div class="container">
         <header>
-            <h1>Neural Primitive Estimator</h1>
-            <p class="subtitle">Explore how neurobiological primitives change over time</p>
+            <h1>Neural Inference</h1>
+            <!-- <p class="subtitle">Using Life Data to Predict Neural Patterns</p> -->
         </header>
 
         <div class="controls">
@@ -1493,28 +1706,21 @@
             const html = `
                 <div class="stats-grid">
                     ${Object.entries(primitives).map(([name, data]) => {
-                        // Skip dopamine and serotonin - they'll be shown in the balance box
-                        if (name === 'dopamine' || name === 'serotonin') {
-                            return '';
+                        // Display circadian_phase as "circadian alignment"
+                        const displayName = name === 'circadian_phase' ? 'circadian alignment' : name.replace('_', ' ');
+                        
+                        // For dopamine and serotonin, use effective score if available
+                        let score = data.modified_score;
+                        if ((name === 'dopamine' || name === 'serotonin') && 
+                            data.effective_score !== null && data.effective_score !== undefined) {
+                            score = data.effective_score;
                         }
-                        // Special handling for circadian phase
-                        if (name === 'circadian_phase') {
-                            const phaseOffset = (data.modified_score - 0.5) * 10;
-                            const phaseOffsetStr = (phaseOffset >= 0 ? '+' : '') + phaseOffset.toFixed(1) + 'h';
-                            return `
-                                <div class="stat-card">
-                                    <h4>${name.replace('_', ' ')}</h4>
-                                    <div class="stat-value">${phaseOffsetStr}</div>
-                                    <div class="stat-description">${getCircadianAlignment(phaseOffset)}</div>
-                                </div>
-                            `;
-                        }
-                        // Regular primitives
+                        
                         return `
                             <div class="stat-card">
-                                <h4>${name.replace('_', ' ')}</h4>
-                                <div class="stat-value">${data.modified_score.toFixed(3)}</div>
-                                <div class="stat-description">${getDescription(name, data.modified_score)}</div>
+                                <h4>${displayName}</h4>
+                                <div class="stat-value">${score.toFixed(3)}</div>
+                                <div class="stat-description">${getDescription(name, score)}</div>
                             </div>
                         `;
                     }).join('')}
@@ -1647,22 +1853,28 @@
         }
 
         function renderSleepDrive(state, timestamp) {
-            const timeStr = new Date(timestamp).toLocaleString('en-US', { 
-                year: 'numeric', 
-                month: 'short', 
-                day: 'numeric', 
-                hour: '2-digit', 
-                minute: '2-digit',
-                second: '2-digit'
-            });
+            // Get adenosine and circadian phase values
+            const adenosine = state.primitives.adenosine.modified_score;
+            const circadian = state.primitives.circadian_phase.modified_score;
+            
             const html = `
-                <div style="text-align: center; margin-bottom: 20px;">
-                    <p style="color: #b0b0b0; font-size: 0.9em; margin-bottom: 5px;">Current Time</p>
-                    <p style="color: #ffffff; font-size: 0.95em; font-weight: 600;">${timeStr}</p>
+                <div class="monoamine-levels">
+                    <div class="monoamine-card">
+                        <h4>Adenosine</h4>
+                        <div class="value" style="color: ${primitiveColors.adenosine};">${adenosine.toFixed(3)}</div>
+                        <div style="font-size: 0.75em; color: #909090; min-height: 1.5em;">Sleep Pressure</div>
+                    </div>
+                    <div class="monoamine-card">
+                        <h4>Circadian Alignment</h4>
+                        <div class="value" style="color: ${primitiveColors.circadian_phase};">${circadian.toFixed(3)}</div>
+                        <div style="font-size: 0.75em; color: #909090; min-height: 1.5em;">Sleep Timing</div>
+                    </div>
                 </div>
-                <div class="stat-card" style="padding: 25px; border: 2px solid #ffffff; border-radius: 0px;">
-                    <div class="stat-value" style="font-size: 2.5em; margin-bottom: 12px;">${state.sleep_drive.toFixed(3)}</div>
-                    <div class="stat-description" style="font-size: 1em;">${getSleepDriveStatus(state.sleep_drive)}</div>
+                
+                <div class="ratio-display">
+                    <h4>Sleep Drive</h4>
+                    <div class="value">${state.sleep_drive.toFixed(3)}</div>
+                    <div style="margin-top: 10px; color: #b0b0b0; font-size: 0.9em;">${getSleepDriveStatus(state.sleep_drive)}</div>
                 </div>
             `;
             document.getElementById('sleepDrive').innerHTML = html;
@@ -1696,20 +1908,6 @@
             document.getElementById('functionalState').innerHTML = html;
         }
 
-        function getCircadianAlignment(phaseOffsetHours) {
-            const absOffset = Math.abs(phaseOffsetHours);
-            
-            if (absOffset < 0.5) {
-                return 'Naturally Aligned';
-            } else if (absOffset < 1.5) {
-                return phaseOffsetHours > 0 ? 'Phase Delayed' : 'Phase Advanced';
-            } else if (absOffset < 3.0) {
-                return phaseOffsetHours > 0 ? 'Phase Delayed' : 'Phase Advanced';
-            } else {
-                return phaseOffsetHours > 0 ? 'Phase Delayed' : 'Phase Advanced';
-            }
-        }
-
         function getDescription(primitive, score) {
             const descriptions = {
                 dopamine: score >= 0.7 ? 'High (good for focus/work)' : score >= 0.5 ? 'Moderate' : score >= 0.3 ? 'Low (may affect motivation)' : 'Very low',
@@ -1717,16 +1915,17 @@
                 norepinephrine: score >= 0.7 ? 'High (alert)' : score >= 0.5 ? 'Moderate' : score >= 0.3 ? 'Low (reduced alertness)' : 'Very low',
                 adenosine: score >= 0.7 ? 'High (need sleep)' : score >= 0.5 ? 'Moderate' : score >= 0.3 ? 'Low (alert)' : 'Very low',
                 cortisol: score >= 0.7 ? 'High (stressed)' : score >= 0.5 ? 'Moderate' : score >= 0.3 ? 'Low (relaxed)' : 'Very low',
-                glucose: score >= 0.7 ? 'High (good energy)' : score >= 0.5 ? 'Moderate' : score >= 0.3 ? 'Low (may need food)' : 'Very low'
+                glucose: score >= 0.7 ? 'High (good energy)' : score >= 0.5 ? 'Moderate' : score >= 0.3 ? 'Low (may need food)' : 'Very low',
+                circadian_phase: score >= 0.7 ? 'Well aligned' : score >= 0.5 ? 'Moderately aligned' : score >= 0.3 ? 'Poorly aligned' : 'Misaligned'
             };
             return descriptions[primitive] || score.toFixed(3);
         }
 
         function getSleepDriveStatus(score) {
-            if (score >= 0.75) return 'VERY HIGH - Strong urge to sleep';
-            if (score >= 0.6) return 'HIGH - Significant sleep pressure';
-            if (score >= 0.4) return 'MODERATE - Building sleep pressure';
-            return 'LOW - Alert and wakeful';
+            if (score >= 0.75) return 'Strong urge to sleep';
+            if (score >= 0.6) return 'Mild urge to sleep ';
+            if (score >= 0.4) return 'Building sleep pressure';
+            return 'Alert and wakeful';
         }
 
         function showError(message) {
@@ -1980,7 +2179,7 @@
                 });
                 
                 if (pastEvents.length > 0) {
-                    html += '<h3>Schedule (Most Recent First)</h3>';
+                    html += '<h3>Events (Most Recent First)</h3>';
                     
                     // Reverse the schedule to show most recent events first
                     const reversedSchedule = [...pastEvents].reverse();

@@ -1,6 +1,11 @@
+[phases.setup]
+nixPkgs = ["rust", "cargo"]
+
 [phases.build]
 cmds = ["cargo build --release --bin server"]
 
-[start]
-cmd = "./target/release/server"
+[phases.install]
+cmds = ["mkdir -p /app/bin", "cp target/release/server /app/bin/"]
 
+[start]
+cmd = "/app/bin/server"

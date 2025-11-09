@@ -1518,31 +1518,134 @@ impl PrimitiveEstimator {
     fn compute_circadian_phase_special(&self, events: &[Event], estimation_time: DateTime<Utc>) -> (f64, Vec<EventContribution>) {
         let mut contributors = Vec::new();
         
-        let _hour_of_day = estimation_time.hour() as f64 + (estimation_time.minute() as f64 / 60.0);
-        
-        let ideal_sleep_time = 23.0;
-        let _ideal_wake_time = 7.0;
-        
+        // Gather recent sleep/wake events (last 7 days)
+        let lookback = estimation_time - Duration::hours(168);
         let sleep_events: Vec<_> = events
             .iter()
-            .filter(|e| e.event_type == "sleep")
+            .filter(|e| e.event_type == "sleep" && e.timestamp >= lookback)
             .collect();
         
-        let mut avg_sleep_hour = ideal_sleep_time;
-        let mut sleep_count = 0;
+        let wake_events: Vec<_> = events
+            .iter()
+            .filter(|e| e.event_type == "wake" && e.timestamp >= lookback)
+            .collect();
         
-        for event in sleep_events.iter().take(7) {
-            let sleep_hour = event.timestamp.hour() as f64;
-            avg_sleep_hour += sleep_hour;
-            sleep_count += 1;
-        }
+        // Component 1: Wake Time Score (0-1)
+        // Optimal: 6:00-8:00 AM → ~1.0
+        // Good: 5:00-9:00 AM → 0.7-0.9
+        // Suboptimal: 4:00-5:00 or 9:00-10:00 AM → 0.4-0.7
+        // Poor: <4:00 or >10:00 AM → <0.4
+        let wake_time_score = if !wake_events.is_empty() {
+            let recent_wakes: Vec<f64> = wake_events.iter().take(7)
+                .map(|e| e.timestamp.hour() as f64 + e.timestamp.minute() as f64 / 60.0)
+                .collect();
+            let avg_wake_hour = recent_wakes.iter().sum::<f64>() / recent_wakes.len() as f64;
+            
+            if avg_wake_hour >= 6.0 && avg_wake_hour <= 8.0 {
+                1.0
+            } else if avg_wake_hour >= 5.0 && avg_wake_hour <= 9.0 {
+                0.85 - (avg_wake_hour - 7.0).abs() * 0.15
+            } else if avg_wake_hour >= 4.0 && avg_wake_hour <= 10.0 {
+                0.6 - (avg_wake_hour - 7.0).abs() * 0.1
+            } else {
+                (0.4 - (avg_wake_hour - 7.0).abs() * 0.05).max(0.0)
+            }
+        } else {
+            0.7 // Default if no data
+        };
         
-        if sleep_count > 0 {
-            avg_sleep_hour /= sleep_count as f64 + 1.0;
-        }
+        // Component 2: Sleep Adequacy Score (0-1)
+        // Optimal: 7.5-9 hours → 1.0
+        // Minimum: 7 hours → 0.85
+        // Insufficient: <7 hours → penalty
+        // Excessive: >9.5 hours → slight penalty
+        let sleep_adequacy_score = if !sleep_events.is_empty() {
+            let recent_durations: Vec<f64> = sleep_events.iter().take(7)
+                .filter_map(|e| e.properties.get("duration_hours").and_then(|v| v.as_f64()))
+                .collect();
+            
+            if !recent_durations.is_empty() {
+                let avg_duration = recent_durations.iter().sum::<f64>() / recent_durations.len() as f64;
+                
+                if avg_duration >= 7.5 && avg_duration <= 9.0 {
+                    1.0
+                } else if avg_duration >= 7.0 && avg_duration < 7.5 {
+                    0.85 + (avg_duration - 7.0) * 0.3
+                } else if avg_duration < 7.0 {
+                    (0.85 * avg_duration / 7.0).max(0.2)
+                } else {
+                    // >9 hours, slight penalty
+                    (1.0 - (avg_duration - 9.0) * 0.1).max(0.7)
+                }
+            } else {
+                0.7
+            }
+        } else {
+            0.7
+        };
         
-        let phase_offset = (avg_sleep_hour - ideal_sleep_time) / 10.0;
+        // Component 3: Consistency Score (0-1)
+        // Low variability in wake times → higher score
+        let consistency_score = if wake_events.len() >= 3 {
+            let recent_wakes: Vec<f64> = wake_events.iter().take(7)
+                .map(|e| e.timestamp.hour() as f64 + e.timestamp.minute() as f64 / 60.0)
+                .collect();
+            
+            let mean = recent_wakes.iter().sum::<f64>() / recent_wakes.len() as f64;
+            let variance = recent_wakes.iter()
+                .map(|&x| (x - mean).powi(2))
+                .sum::<f64>() / recent_wakes.len() as f64;
+            let std_dev = variance.sqrt();
+            
+            // Standard deviation of wake times:
+            // <0.5h → excellent consistency (0.95)
+            // ~1h → good (0.8)
+            // ~2h → fair (0.6)
+            // >3h → poor (<0.4)
+            (1.0 - (std_dev * 0.2)).clamp(0.3, 0.95)
+        } else {
+            0.7
+        };
         
+        // Component 4: Bedtime Appropriateness (0-1)
+        // Does bedtime support adequate sleep before optimal wake time?
+        let bedtime_score = if !sleep_events.is_empty() && !wake_events.is_empty() {
+            let recent_sleep_hours: Vec<f64> = sleep_events.iter().take(7)
+                .map(|e| {
+                    let hour = e.timestamp.hour() as f64;
+                    // Normalize bedtime: 22-23 stays as is, 0-6 becomes 24-30
+                    if hour <= 6.0 { hour + 24.0 } else { hour }
+                })
+                .collect();
+            
+            let recent_wake_hours: Vec<f64> = wake_events.iter().take(7)
+                .map(|e| e.timestamp.hour() as f64 + e.timestamp.minute() as f64 / 60.0)
+                .collect();
+            
+            let avg_bedtime = recent_sleep_hours.iter().sum::<f64>() / recent_sleep_hours.len() as f64;
+            let avg_wake = recent_wake_hours.iter().sum::<f64>() / recent_wake_hours.len() as f64;
+            
+            // Calculate sleep opportunity window
+            let normalized_bedtime = if avg_bedtime >= 24.0 { avg_bedtime - 24.0 } else { avg_bedtime };
+            let sleep_window = if avg_wake > normalized_bedtime {
+                avg_wake - normalized_bedtime
+            } else {
+                (24.0 - normalized_bedtime) + avg_wake
+            };
+            
+            // Ideal bedtime allows 7.5-9h sleep before wake
+            if sleep_window >= 7.5 && sleep_window <= 9.5 {
+                1.0
+            } else if sleep_window < 7.5 {
+                (sleep_window / 7.5 * 0.9).max(0.3)
+            } else {
+                (1.0 - (sleep_window - 9.5) * 0.1).max(0.6)
+            }
+        } else {
+            0.7
+        };
+        
+        // Light exposure adjustments (entrainment signals)
         let cutoff_time = estimation_time - Duration::hours(168);
         let light_events: Vec<_> = events
             .iter()
@@ -1555,22 +1658,50 @@ impl PrimitiveEstimator {
             if let Some(&impact) = impacts.get("circadian_phase") {
                 let hours_ago = (estimation_time - event.timestamp).num_minutes() as f64 / 60.0;
                 let decay = Self::exponential_decay(hours_ago, 72.0);
-                light_adjustment += impact * decay;
+                
+                // Light can modestly improve or worsen alignment
+                // Morning light helps alignment, evening light hurts it
+                let alignment_impact = impact * decay * 0.15;
+                light_adjustment += alignment_impact;
                 
                 contributors.push(EventContribution {
                     event_id: event.event_id.clone(),
                     event_type: "light_exposure".to_string(),
-                    impact,
-                    decayed_impact: impact * decay,
+                    impact: alignment_impact,
+                    decayed_impact: alignment_impact,
                     hours_ago,
                 });
             }
         }
         
-        let baseline = 0.5;
-        let final_score = (baseline + phase_offset + light_adjustment).clamp(0.0, 1.0);
+        // Combine components with weights
+        // Wake time is most important (40%), then adequacy (30%), then consistency (20%) and bedtime (10%)
+        let alignment_score = (
+            wake_time_score * 0.40 +
+            sleep_adequacy_score * 0.30 +
+            consistency_score * 0.20 +
+            bedtime_score * 0.10 +
+            light_adjustment
+        ).clamp(0.0, 1.0);
         
-        (final_score, contributors)
+        // Add component scores as contributors for transparency
+        contributors.push(EventContribution {
+            event_id: "wake_time_alignment".to_string(),
+            event_type: "circadian_component".to_string(),
+            impact: wake_time_score * 0.40,
+            decayed_impact: wake_time_score * 0.40,
+            hours_ago: 0.0,
+        });
+        
+        contributors.push(EventContribution {
+            event_id: "sleep_adequacy".to_string(),
+            event_type: "circadian_component".to_string(),
+            impact: sleep_adequacy_score * 0.30,
+            decayed_impact: sleep_adequacy_score * 0.30,
+            hours_ago: 0.0,
+        });
+        
+        (alignment_score, contributors)
     }
 
     fn compute_monoamine_scores(
@@ -1843,8 +1974,12 @@ impl PrimitiveEstimator {
         let cortisol = scores.get("cortisol").copied().unwrap_or(0.5);
         
         if let Some(dopamine) = scores.get("dopamine") {
-            let adenosine_suppression = if adenosine > 0.6 {
-                -0.15 * (adenosine - 0.6)
+            // Non-linear adenosine suppression: fatigue compounds
+            // Research shows sleep deprivation downregulates D2 receptors via adenosine
+            // Using squared relationship to model compounding effects
+            let adenosine_suppression = if adenosine > 0.5 {
+                let excess = adenosine - 0.5;
+                -1.2 * excess * excess  // Max suppression ~-0.3 when adenosine = 1.0
             } else {
                 0.0
             };

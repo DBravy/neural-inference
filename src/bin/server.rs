@@ -15,7 +15,10 @@ use dotenv::dotenv;
 struct EstimateRequest {
     profile_id: String,
     resolution_hours: i64,
+    // timezone_offset_minutes is sent by the frontend but not used for estimation
+    // (events are already in local time, so we don't need to adjust)
     #[serde(default)]
+    #[allow(dead_code)]
     timezone_offset_minutes: Option<i64>,
 }
 
@@ -70,12 +73,12 @@ async fn estimate_profile(req: web::Json<EstimateRequest>) -> impl Responder {
     let display_days: i64 = 4;
     let padding_days_before: i64 = 7; // matches max ContextConfig window (168h)
     let event_data = generate_profile_events(&req.profile_id, display_days + padding_days_before);
-    let tz_offset = req.timezone_offset_minutes.unwrap_or(0);
-    let shifted_events = if tz_offset == 0 {
-        event_data.events.clone()
-    } else {
-        shift_events_by_offset(&event_data.events, tz_offset)
-    };
+    
+    // NOTE: We do NOT shift events for estimation. Profile events are generated with
+    // UTC timestamps where the hour component represents local time (e.g., 23:00 UTC = 11 PM local).
+    // Circadian calculations depend on these hour values being correct for local time.
+    // We only shift timestamps for display purposes (when showing the schedule to users).
+    let events_for_estimation = event_data.events.clone();
     
     // Create estimator
     let estimator = PrimitiveEstimator::new();
@@ -87,7 +90,7 @@ async fn estimate_profile(req: web::Json<EstimateRequest>) -> impl Responder {
     
     let mut current_time = start_time;
     while current_time <= end_time {
-        let result = estimator.estimate_at_time(&shifted_events, current_time);
+        let result = estimator.estimate_at_time(&events_for_estimation, current_time);
         
         // Extract primitive scores
         let mut primitives = HashMap::new();
@@ -104,7 +107,7 @@ async fn estimate_profile(req: web::Json<EstimateRequest>) -> impl Responder {
     }
     
     // Get final state
-    let final_result = estimator.estimate_at_time(&shifted_events, end_time);
+    let final_result = estimator.estimate_at_time(&events_for_estimation, end_time);
     let final_state = serde_json::to_value(&final_result).unwrap();
     
     HttpResponse::Ok().json(EstimateResponse {
