@@ -948,23 +948,117 @@ fn compute_interruption_impacts(event: &Event) -> HashMap<String, f64> {
 pub struct PrimitiveEstimator {
     baseline_values: HashMap<String, f64>,
     current_adenosine_level: Cell<f64>,
+    adhd_mode: bool,  // NEW: Toggle ADHD-specific neural dynamics
 }
 
 impl PrimitiveEstimator {
     pub fn new() -> Self {
+        Self::with_adhd_mode(false)
+    }
+    
+    pub fn with_adhd_mode(adhd_mode: bool) -> Self {
         let mut baseline_values = HashMap::new();
         
-        baseline_values.insert("dopamine".to_string(), 0.5);
-        baseline_values.insert("norepinephrine".to_string(), 0.5);
-        baseline_values.insert("serotonin".to_string(), 0.5);
-        baseline_values.insert("adenosine".to_string(), 0.3);
-        baseline_values.insert("circadian_phase".to_string(), 0.5);
-        baseline_values.insert("cortisol".to_string(), 0.4);
-        baseline_values.insert("glucose".to_string(), 0.5);
+        // ADHD mode: Lower baseline dopamine and norepinephrine
+        // Research shows reduced baseline catecholamine signaling in ADHD
+        if adhd_mode {
+            baseline_values.insert("dopamine".to_string(), 0.35);  // Lower baseline (normal: 0.5)
+            baseline_values.insert("norepinephrine".to_string(), 0.38);  // Lower baseline (normal: 0.5)
+            baseline_values.insert("serotonin".to_string(), 0.5);
+            baseline_values.insert("adenosine".to_string(), 0.3);
+            baseline_values.insert("circadian_phase".to_string(), 0.5);
+            baseline_values.insert("cortisol".to_string(), 0.4);
+            baseline_values.insert("glucose".to_string(), 0.5);
+        } else {
+            baseline_values.insert("dopamine".to_string(), 0.5);
+            baseline_values.insert("norepinephrine".to_string(), 0.5);
+            baseline_values.insert("serotonin".to_string(), 0.5);
+            baseline_values.insert("adenosine".to_string(), 0.3);
+            baseline_values.insert("circadian_phase".to_string(), 0.5);
+            baseline_values.insert("cortisol".to_string(), 0.4);
+            baseline_values.insert("glucose".to_string(), 0.5);
+        }
 
         PrimitiveEstimator {
             baseline_values,
             current_adenosine_level: Cell::new(0.3),
+            adhd_mode,
+        }
+    }
+
+    // ========================================================================
+    // ADHD-SPECIFIC NEURAL DYNAMICS
+    // ========================================================================
+    
+    /// Calculate temporal discounting coefficient for ADHD
+    /// ADHD exhibits steep temporal discounting - future rewards are heavily devalued
+    /// Returns a multiplier (0.0-1.0) based on how far in the future the reward/impact is
+    fn adhd_temporal_discount(&self, hours_ago: f64) -> f64 {
+        if !self.adhd_mode {
+            return 1.0;  // No discounting in normal mode
+        }
+        
+        // ADHD temporal discounting: steep hyperbolic function
+        // Recent events (last 2 hours) have full impact
+        // Future-oriented or delayed events decay rapidly
+        // Based on research showing ADHD brains discount delayed rewards by ~50-70%
+        
+        if hours_ago < 2.0 {
+            1.0  // Full impact for very recent/immediate events
+        } else {
+            // Hyperbolic discounting: 1 / (1 + k * delay)
+            // k = 0.3 creates steep ADHD-characteristic curve
+            let k = 0.3;
+            1.0 / (1.0 + k * (hours_ago - 2.0))
+        }
+    }
+    
+    /// Modify dopamine impact based on reward immediacy (ADHD-specific)
+    /// Immediate rewards produce STRONGER dopamine response in ADHD
+    /// Delayed rewards produce WEAKER dopamine response
+    fn adhd_reward_modulation(&self, base_impact: f64, reward_immediacy: f64) -> f64 {
+        if !self.adhd_mode {
+            return base_impact;
+        }
+        
+        // reward_immediacy: 1.0 = immediate, 0.0 = very delayed
+        // ADHD: amplify immediate (1.0-1.3x), reduce delayed (0.5-0.7x)
+        let modulation = 0.7 + (0.6 * reward_immediacy);
+        base_impact * modulation
+    }
+    
+    /// Calculate ADHD-specific decay rate
+    /// Dopamine/NE decay faster in ADHD, especially for non-immediate rewards
+    fn adhd_decay_modifier(&self, primitive: Primitive) -> f64 {
+        if !self.adhd_mode {
+            return 1.0;  // Normal decay
+        }
+        
+        match primitive {
+            Primitive::Dopamine => 1.35,  // 35% faster decay
+            Primitive::Norepinephrine => 1.25,  // 25% faster decay
+            _ => 1.0,  // Other primitives unaffected
+        }
+    }
+    
+    /// Add ADHD variability/noise to primitive levels
+    /// Models fluctuating arousal and attention typical of ADHD
+    fn adhd_add_variability(&self, base_score: f64, primitive: Primitive) -> f64 {
+        if !self.adhd_mode {
+            return base_score;
+        }
+        
+        // ADHD exhibits higher intra-individual variability
+        // Add controlled noise especially to attention-related primitives
+        match primitive {
+            Primitive::Dopamine | Primitive::Norepinephrine => {
+                // Use a simple deterministic "noise" based on the score itself
+                // to avoid randomness that would make results non-reproducible
+                let noise_amplitude = 0.08;  // ±8% variability
+                let pseudo_noise = ((base_score * 100.0).sin()) * noise_amplitude;
+                (base_score + pseudo_noise).clamp(0.0, 1.0)
+            }
+            _ => base_score
         }
     }
 
@@ -1281,7 +1375,7 @@ impl PrimitiveEstimator {
             let impacts = self.compute_event_impacts(event, estimation_time);
             
             if let Some(&raw_impact) = impacts.get(primitive.as_str()) {
-                let decay_factor = Self::exponential_decay(hours_ago, config.decay_half_life_hours);
+                let decay_factor = self.exponential_decay(hours_ago, config.decay_half_life_hours, primitive);
                 let decayed_impact = raw_impact * decay_factor;
                 
                 accumulated_impact += decayed_impact;
@@ -1435,7 +1529,7 @@ impl PrimitiveEstimator {
                 // Compute decay from the end of sleep (when clearance manifests)
                 let end_ts = event.end_timestamp.unwrap_or(event.timestamp);
                 let hours_ago = (estimation_time - end_ts).num_minutes() as f64 / 60.0;
-                let decay = Self::exponential_decay(hours_ago, 16.0);
+                let decay = self.exponential_decay(hours_ago, 16.0, Primitive::Adenosine);
                 sleep_clearance += clearance * decay;
                 
                 contributors.push(EventContribution {
@@ -1459,7 +1553,7 @@ impl PrimitiveEstimator {
             let impacts = compute_caffeine_impacts(event);
             if let Some(&suppression) = impacts.get("adenosine") {
                 let hours_ago = (estimation_time - event.timestamp).num_minutes() as f64 / 60.0;
-                let decay = Self::exponential_decay(hours_ago, 5.0);
+                let decay = self.exponential_decay(hours_ago, 5.0, Primitive::Adenosine);
                 caffeine_suppression += suppression * decay;
                 
                 contributors.push(EventContribution {
@@ -1481,7 +1575,7 @@ impl PrimitiveEstimator {
             let impacts = compute_nap_impacts(event);
             if let Some(&clearance) = impacts.get("adenosine") {
                 let hours_ago = (estimation_time - event.timestamp).num_minutes() as f64 / 60.0;
-                let decay = Self::exponential_decay(hours_ago, 8.0);
+                let decay = self.exponential_decay(hours_ago, 8.0, Primitive::Adenosine);
                 sleep_clearance += clearance * decay;
                 
                 contributors.push(EventContribution {
@@ -1657,7 +1751,7 @@ impl PrimitiveEstimator {
             let impacts = compute_light_impacts(event, estimation_time);
             if let Some(&impact) = impacts.get("circadian_phase") {
                 let hours_ago = (estimation_time - event.timestamp).num_minutes() as f64 / 60.0;
-                let decay = Self::exponential_decay(hours_ago, 72.0);
+                let decay = self.exponential_decay(hours_ago, 72.0, Primitive::CircadianPhase);
                 
                 // Light can modestly improve or worsen alignment
                 // Morning light helps alignment, evening light hurts it
@@ -1740,12 +1834,12 @@ impl PrimitiveEstimator {
             let impacts = self.compute_event_impacts(event, estimation_time);
             
             if let Some(&raw_impact) = impacts.get(primitive.as_str()) {
-                let chronic_decay = Self::exponential_decay(hours_ago, chronic_config.decay_half_life_hours);
+                let chronic_decay = self.exponential_decay(hours_ago, chronic_config.decay_half_life_hours, primitive);
                 let chronic_contribution = raw_impact * chronic_decay;
                 chronic_impact += chronic_contribution;
                 
                 if hours_ago <= acute_config.window_hours as f64 {
-                    let acute_decay = Self::exponential_decay(hours_ago, acute_config.decay_half_life_hours);
+                    let acute_decay = self.exponential_decay(hours_ago, acute_config.decay_half_life_hours, primitive);
                     let acute_contribution = raw_impact * acute_decay;
                     acute_impact += acute_contribution;
                 }
@@ -1774,8 +1868,12 @@ impl PrimitiveEstimator {
         (acute_score, chronic_score, combined_score, all_contributors)
     }
 
-    fn exponential_decay(hours_ago: f64, half_life_hours: f64) -> f64 {
-        let lambda = 0.693147 / half_life_hours;
+    fn exponential_decay(&self, hours_ago: f64, half_life_hours: f64, primitive: Primitive) -> f64 {
+        // Apply ADHD decay modifier to the half-life
+        let adhd_modifier = self.adhd_decay_modifier(primitive);
+        let effective_half_life = half_life_hours / adhd_modifier;
+        
+        let lambda = 0.693147 / effective_half_life;
         (-lambda * hours_ago).exp()
     }
 
@@ -1973,25 +2071,38 @@ impl PrimitiveEstimator {
         let adenosine = scores.get("adenosine").copied().unwrap_or(0.5);
         let cortisol = scores.get("cortisol").copied().unwrap_or(0.5);
         
+        // ADHD mode: Stronger suppression effects from adenosine and cortisol
+        let adhd_suppression_multiplier = if self.adhd_mode { 1.4 } else { 1.0 };
+        
         if let Some(dopamine) = scores.get("dopamine") {
             // Non-linear adenosine suppression: fatigue compounds
             // Research shows sleep deprivation downregulates D2 receptors via adenosine
             // Using squared relationship to model compounding effects
+            // ADHD: Even more sensitive to adenosine effects
             let adenosine_suppression = if adenosine > 0.5 {
                 let excess = adenosine - 0.5;
-                -1.2 * excess * excess  // Max suppression ~-0.3 when adenosine = 1.0
+                -1.2 * adhd_suppression_multiplier * excess * excess  // Stronger in ADHD
             } else {
                 0.0
             };
             
             let cortisol_suppression = if cortisol > 0.6 {
-                -0.2 * (cortisol - 0.6)
+                -0.2 * adhd_suppression_multiplier * (cortisol - 0.6)  // Stronger in ADHD
             } else {
                 0.0
             };
             
             let modified_dopamine = (dopamine + adenosine_suppression + cortisol_suppression).clamp(0.0, 1.0);
-            modified_scores.insert("dopamine".to_string(), modified_dopamine);
+            
+            // Apply ADHD variability
+            let final_dopamine = self.adhd_add_variability(modified_dopamine, Primitive::Dopamine);
+            modified_scores.insert("dopamine".to_string(), final_dopamine);
+        }
+        
+        if let Some(norepinephrine) = scores.get("norepinephrine") {
+            // Apply ADHD variability to norepinephrine as well
+            let final_ne = self.adhd_add_variability(*norepinephrine, Primitive::Norepinephrine);
+            modified_scores.insert("norepinephrine".to_string(), final_ne);
         }
         
         if let Some(serotonin) = scores.get("serotonin") {

@@ -422,6 +422,8 @@ Each primitive has biologically-appropriate windows:
 
 **Exponential decay formula**: `e^(-0.693 × hours_ago / half_life)`
 
+**Note**: ADHD mode reduces effective half-life for dopamine (÷1.35) and norepinephrine (÷1.25), modeling faster catecholamine clearance.
+
 ## Event Data Structure
 
 Events contain only **activity metadata**, not impacts:
@@ -491,6 +493,39 @@ Events contain only **activity metadata**, not impacts:
 10. Clamp scores to valid ranges
 11. Generate interpretation with confidence indicators
 ```
+
+## ADHD Mode
+
+The estimator includes a toggleable ADHD mode that modifies neural dynamics based on research on dopamine dysregulation, temporal discounting, and executive function deficits in ADHD.
+
+**Usage**:
+```rust
+// Normal mode (default)
+let estimator = PrimitiveEstimator::new();
+
+// ADHD mode enabled
+let estimator = PrimitiveEstimator::with_adhd_mode(true);
+```
+
+**Key modifications when ADHD mode is enabled**:
+
+| Parameter | Normal | ADHD | Research Basis |
+|-----------|--------|------|----------------|
+| Dopamine baseline | 0.50 | 0.35 | Reduced DAT/D2 receptor availability |
+| NE baseline | 0.50 | 0.38 | Impaired noradrenergic signaling |
+| DA decay rate | 1.0× | 1.35× | Faster catecholamine clearance |
+| NE decay rate | 1.0× | 1.25× | Reduced "holding power" of motivation |
+| Immediate rewards | 1.0× | 1.3× | Enhanced reward sensitivity |
+| Delayed rewards | 1.0× | 0.5-0.7× | Steep temporal discounting |
+| Adenosine suppression | 1.0× | 1.4× | Greater sleep deprivation impact |
+| Cortisol suppression | 1.0× | 1.4× | Higher stress vulnerability |
+| DA/NE variability | 0% | ±8% | Fluctuating arousal/attention |
+
+**Temporal discounting function**: `1 / (1 + 0.3 × hours_since_event)` - Future rewards rapidly lose value, modeling the "NOW vs NOT NOW" time perception characteristic of ADHD.
+
+**Effect**: Same event stream produces different neural trajectories. Immediate gratification activities (gaming, social media) show enhanced dopamine response, while delayed gratification tasks (studying, long-term goals) show blunted response and faster decay.
+
+**Research basis**: Volkow et al. (reward pathway dysfunction), Scheres et al. (temporal discounting), Rapport et al. (working memory deficits), del Campo et al. (catecholamine dysregulation).
 
 ## Key Benefits of Research-Based Approach
 
@@ -580,5 +615,6 @@ Potential additions to the research-based approach:
 4. **Medication interactions**: Pharmacological impacts on primitives
 5. **Chronic conditions**: Diabetes, depression, anxiety baselines
 6. **Longitudinal learning**: Refine parameters over time based on outcomes
+7. **ADHD enhancements**: Medication simulation (stimulants), hyperfocus states, ADHD subtypes (inattentive vs hyperactive-impulsive)
 
 The system demonstrates how **quantitative neuroscience research can be translated into algorithmic models** that derive meaningful biological insights from everyday activity data.

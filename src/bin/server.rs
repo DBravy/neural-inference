@@ -20,6 +20,8 @@ struct EstimateRequest {
     #[serde(default)]
     #[allow(dead_code)]
     timezone_offset_minutes: Option<i64>,
+    #[serde(default)]
+    adhd_mode: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -80,8 +82,8 @@ async fn estimate_profile(req: web::Json<EstimateRequest>) -> impl Responder {
     // We only shift timestamps for display purposes (when showing the schedule to users).
     let events_for_estimation = event_data.events.clone();
     
-    // Create estimator
-    let estimator = PrimitiveEstimator::new();
+    // Create estimator with ADHD mode if requested
+    let estimator = PrimitiveEstimator::with_adhd_mode(req.adhd_mode);
     
     // Generate timeline
     let mut timeline = Vec::new();

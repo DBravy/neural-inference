@@ -950,6 +950,53 @@
             box-shadow: 0 6px 20px rgba(255, 255, 255, 0.5);
         }
 
+        /* Toggle Switch */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+            flex-shrink: 0;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #000000;
+            border: 2px solid #ffffff;
+            transition: .4s;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 3px;
+            bottom: 3px;
+            background-color: #ffffff;
+            transition: .4s;
+        }
+
+        input:checked + .toggle-slider {
+            background-color: #ffffff;
+        }
+
+        input:checked + .toggle-slider:before {
+            background-color: #000000;
+            transform: translateX(26px);
+        }
+
         .monoamine-levels {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -1427,6 +1474,21 @@
                 <!-- Profiles will be loaded here -->
             </div>
 
+            <div style="margin: 20px 0; padding: 15px; border: 2px solid #ffffff; background: #000000;">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <label style="color: #e0e0e0; font-weight: 600; cursor: pointer; flex: 1;" for="adhdModeToggle">
+                        ADHD Mode
+                        <span style="display: block; font-size: 0.85em; font-weight: normal; color: #b0b0b0; margin-top: 4px;">
+                            Simulates ADHD-specific neural dynamics
+                        </span>
+                    </label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="adhdModeToggle" onchange="toggleAdhdMode()">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+
             <div class="time-controls">
                 <label>Resolution:</label>
                 <select id="resolution">
@@ -1488,6 +1550,7 @@
         let selectedProfile = null;
         let currentChart = null;
         let isAnalyzing = false;
+        let adhdMode = false;
 
         // Primitive colors
         const primitiveColors = {
@@ -1540,6 +1603,16 @@
             document.getElementById('analyzeBtn').disabled = false;
         }
 
+        function toggleAdhdMode() {
+            // Update the ADHD mode state
+            adhdMode = document.getElementById('adhdModeToggle').checked;
+            
+            // If we have a selected profile and results are already showing, re-run analysis
+            if (selectedProfile && document.getElementById('results').style.display !== 'none') {
+                runAnalysis();
+            }
+        }
+
         async function runAnalysis() {
             if (!selectedProfile) {
                 showError('Please select a profile first');
@@ -1579,7 +1652,8 @@
                     body: JSON.stringify({
                         profile_id: selectedProfile.id,
                         resolution_hours: resolution,
-                        timezone_offset_minutes: new Date().getTimezoneOffset()
+                        timezone_offset_minutes: new Date().getTimezoneOffset(),
+                        adhd_mode: adhdMode
                     })
                 });
 
