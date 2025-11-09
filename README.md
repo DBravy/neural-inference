@@ -32,11 +32,11 @@ Then open `http://localhost:8080` in your browser.
 ### Available Profiles
 
 Pre-built profiles for testing:
-- `healthy_balanced` - Well-rested, regular exercise, good nutrition
-- `chronically_sleep_deprived` - Multiple nights of poor sleep
+- `healthy` - Well-rested, regular exercise, good nutrition
+- `sleep_deprived` - Multiple nights of poor sleep
 - `shift_worker` - Night shifts with circadian disruption
-- `high_performer` - Intense exercise and optimized schedule
-- `stressed_student` - Poor sleep, high stress, irregular meals
+- `athlete` - Intense exercise and optimized schedule
+- `high_stress` - Poor sleep, high stress, irregular meals
 
 ## Data Format
 
