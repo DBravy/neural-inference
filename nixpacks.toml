@@ -4,6 +4,3 @@ cmds = ["cargo build --release --bin server"]
 [start]
 cmd = "./target/release/server"
 
-[staticAssets]
-"/static" = "./static"
-
