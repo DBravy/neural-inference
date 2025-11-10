@@ -1710,14 +1710,23 @@
             const canvas = document.getElementById('primitivesChart');
             const ctx = canvas.getContext('2d');
 
+            // Get timezone offset to convert "fake UTC" timestamps to display correctly
+            const tzOffsetMs = new Date().getTimezoneOffset() * 60 * 1000;
+
             // Prepare datasets
             const primitives = ['dopamine', 'serotonin', 'norepinephrine', 'adenosine', 'cortisol', 'glucose'];
             const datasets = primitives.map(prim => ({
                 label: prim.charAt(0).toUpperCase() + prim.slice(1),
-                data: timeline.map(point => ({
-                    x: new Date(point.timestamp),
-                    y: point.primitives[prim]
-                })),
+                data: timeline.map(point => {
+                    // Timestamps are in "fake UTC" (hour represents local time)
+                    // Add timezone offset to convert to real UTC for proper display
+                    const fakeUtcDate = new Date(point.timestamp);
+                    const realUtcDate = new Date(fakeUtcDate.getTime() + tzOffsetMs);
+                    return {
+                        x: realUtcDate,
+                        y: point.primitives[prim]
+                    };
+                }),
                 borderColor: primitiveColors[prim],
                 backgroundColor: primitiveColors[prim] + '20',
                 tension: 0.4,
