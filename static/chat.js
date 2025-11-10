@@ -112,9 +112,11 @@
         
         try {
             // Include profile_id in the request so AI has context
+            const tzOffset = new Date().getTimezoneOffset(); // minutes to add to local to get UTC
             const requestBody = { 
                 messages: state.messages,
-                profile_id: state.profileId || 'healthy'  // Default to 'healthy' if not set
+                profile_id: state.profileId || 'healthy',  // Default to 'healthy' if not set
+                timezone_offset_minutes: tzOffset
             };
             
             const response = await fetch('/api/chat', {

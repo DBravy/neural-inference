@@ -15,6 +15,9 @@ pub struct ChatRequest {
     // Optional: specify which profile or provide custom event data
     pub user_id: Option<String>,
     pub profile_id: Option<String>,
+    // Timezone offset in minutes (e.g., -360 for CST/UTC-6)
+    #[serde(default)]
+    pub timezone_offset_minutes: Option<i64>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -41,7 +44,7 @@ struct OpenAIChoice {
 }
 
 /// Generate a comprehensive context string from estimation results
-fn format_neurological_context(result: &EstimationResult, recent_events: &[crate::Event]) -> String {
+fn format_neurological_context(result: &EstimationResult, recent_events: &[crate::Event], current_time: chrono::DateTime<chrono::Utc>) -> String {
     let mut context = String::new();
     
     // 1. Current functional state
@@ -118,17 +121,26 @@ fn format_neurological_context(result: &EstimationResult, recent_events: &[crate
     }
     
     // 5. Recent significant events (last 12 hours)
-    let now = chrono::Utc::now();
+    let now = current_time;
     let recent_cutoff = now - chrono::Duration::hours(12);
     let recent: Vec<_> = recent_events
         .iter()
-        .filter(|e| e.timestamp >= recent_cutoff)
+        .filter(|e| e.timestamp >= recent_cutoff && e.timestamp <= now)
         .collect();
+    
+    eprintln!("🔍 Filtering recent events: now={}, cutoff={}, found {} events", 
+              now.format("%H:%M"), 
+              recent_cutoff.format("%H:%M"),
+              recent.len());
     
     if !recent.is_empty() {
         context.push_str("RECENT EVENTS (last 12 hours):\n");
         for event in recent.iter().rev().take(10) {
             let hours_ago = (now - event.timestamp).num_minutes() as f64 / 60.0;
+            eprintln!("  - {} at {} ({:.1}h ago)", 
+                     event.event_type, 
+                     event.timestamp.format("%H:%M"),
+                     hours_ago);
             context.push_str(&format!(
                 "- {} {:.1}h ago",
                 event.event_type,
@@ -240,15 +252,45 @@ pub async fn chat_reply(req: ChatRequest) -> Result<ChatResponse, String> {
     let padding_days_before: i64 = 7; // matches max ContextConfig window (168h)
     let event_data = crate::generate_profile_events(profile_id, display_days + padding_days_before);
     
+    // Convert real UTC to "fake UTC" for proper event comparison
+    // Events are stored with UTC timestamps where the hour component represents local time
+    // So we subtract the timezone offset to get "fake UTC" time
+    let tz_offset_minutes = req.timezone_offset_minutes.unwrap_or(0);
+    let real_utc_now = chrono::Utc::now();
+    let fake_utc_now = real_utc_now - chrono::Duration::minutes(tz_offset_minutes);
+    
+    eprintln!("🕐 Chat timezone: offset={} min, real_utc={}, fake_utc={}", 
+              tz_offset_minutes, 
+              real_utc_now.format("%H:%M"), 
+              fake_utc_now.format("%H:%M"));
+    
+    // Calculate timezone abbreviation for display
+    let tz_hours = -tz_offset_minutes / 60;
+    let tz_name = match tz_hours {
+        -10 => "HST",
+        -9 => "AKST",
+        -8 => "PST",
+        -7 => "MST",
+        -6 => "CST",
+        -5 => "EST",
+        0 => "UTC",
+        _ => if tz_hours > 0 { "UTC+" } else { "UTC" }
+    };
+    let tz_display = if tz_hours.abs() > 0 && !matches!(tz_hours, -10..=0) {
+        format!("{}{}", tz_name, tz_hours)
+    } else {
+        tz_name.to_string()
+    };
+    
     // Run the estimator to get current state
     let estimator = PrimitiveEstimator::new();
     let estimation = estimator.estimate_at_time(
         &event_data.events,
-        chrono::Utc::now(),
+        fake_utc_now,
     );
     
     // Generate rich neurological context
-    let neuro_context = format_neurological_context(&estimation, &event_data.events);
+    let neuro_context = format_neurological_context(&estimation, &event_data.events, fake_utc_now);
     
     // Create system message with context
     let system_message = format!(
@@ -263,12 +305,15 @@ When answering:\n\
 low glucose from skipping breakfast is why you feel tired\")\n\
 - Be specific about timing (\"2 hours ago\", \"this morning\")\n\
 - Give actionable advice based on what would help their specific state\n\
-- Consider interactions between primitives (e.g., high cortisol suppressing dopamine)\n\n\
+- Consider interactions between primitives (e.g., high cortisol suppressing dopamine)\n\
+- Always use the user's local timezone ({}) when discussing times\n\n\
 CURRENT NEUROLOGICAL STATE:\n\
 {}\n\n\
-Current time: {}",
+Current time: {} {}",
+        tz_display,
         neuro_context,
-        chrono::Utc::now().format("%Y-%m-%d %H:%M UTC")
+        fake_utc_now.format("%Y-%m-%d %H:%M"),
+        tz_display
     );
     
     // Build messages array with system context

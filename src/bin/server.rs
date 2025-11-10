@@ -85,10 +85,17 @@ async fn estimate_profile(req: web::Json<EstimateRequest>) -> impl Responder {
     // Create estimator with ADHD mode if requested
     let estimator = PrimitiveEstimator::with_adhd_mode(req.adhd_mode);
     
+    // Convert real UTC to "fake UTC" for proper event comparison
+    // Events are stored with UTC timestamps where the hour component represents local time
+    // So we subtract the timezone offset to get "fake UTC" time
+    let tz_offset_minutes = req.timezone_offset_minutes.unwrap_or(0);
+    let real_utc_now = Utc::now();
+    let fake_utc_now = real_utc_now - Duration::minutes(tz_offset_minutes);
+    
     // Generate timeline
     let mut timeline = Vec::new();
-    let start_time = Utc::now() - Duration::days(display_days);
-    let end_time = Utc::now();
+    let start_time = fake_utc_now - Duration::days(display_days);
+    let end_time = fake_utc_now;
     
     let mut current_time = start_time;
     while current_time <= end_time {
