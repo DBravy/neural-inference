@@ -104,7 +104,13 @@ async fn estimate_profile(req: web::Json<EstimateRequest>) -> impl Responder {
         // Extract primitive scores
         let mut primitives = HashMap::new();
         for (key, state) in &result.primitives {
-            primitives.insert(key.clone(), state.modified_score);
+            // For dopamine and serotonin, use effective_score (after reciprocal inhibition) if available
+            let score = if (key == "dopamine" || key == "serotonin") && state.effective_score.is_some() {
+                state.effective_score.unwrap()
+            } else {
+                state.modified_score
+            };
+            primitives.insert(key.clone(), score);
         }
         
         timeline.push(TimelinePoint {
