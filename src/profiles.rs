@@ -41,46 +41,60 @@ fn create_rng(profile_id: &str, day: i64) -> StdRng {
 }
 
 pub fn get_all_profiles() -> Vec<Profile> {
-    // Generate schedule for display purposes (3 days worth of events)
-    let display_days = 3;
-    let base_time = Utc::now() - Duration::days(display_days);
+    // Generate schedule with same window as estimation system for consistency
+    // The estimation system uses 4 display days + 7 padding days = 11 total
+    // We must use the same window to ensure event timestamps match
+    let display_days = 4;   // Matches estimate_profile endpoint
+    let padding_days = 7;   // Matches max ContextConfig window (168h)
+    let total_days = display_days + padding_days;
+    
+    // Round to start of current day to ensure consistent base_time across all calls
+    let now = Utc::now();
+    let today_start = now.with_hour(0).unwrap().with_minute(0).unwrap()
+        .with_second(0).unwrap().with_nanosecond(0).unwrap();
+    let base_time = today_start - Duration::days(total_days);
     
     vec![
         Profile {
             id: "healthy".to_string(),
             name: "Healthy Routine".to_string(),
             description: "Consistent sleep, balanced meals, regular exercise, and good habits".to_string(),
-            schedule: generate_healthy_routine(base_time, display_days),
+            schedule: generate_healthy_routine(base_time, total_days),
         },
         Profile {
             id: "sleep_deprived".to_string(),
             name: "Finals Week".to_string(),
             description: "Multiple nights of poor sleep with high caffeine use".to_string(),
-            schedule: generate_sleep_deprived(base_time, display_days),
+            schedule: generate_sleep_deprived(base_time, total_days),
         },
         Profile {
             id: "high_stress".to_string(),
             name: "High Stress".to_string(),
             description: "Work pressure, frequent stress events, and irregular eating".to_string(),
-            schedule: generate_high_stress(base_time, display_days),
+            schedule: generate_high_stress(base_time, total_days),
         },
         Profile {
             id: "athlete".to_string(),
             name: "Athlete Training".to_string(),
             description: "Intense exercise routine with optimized nutrition and recovery".to_string(),
-            schedule: generate_athlete(base_time, display_days),
+            schedule: generate_athlete(base_time, total_days),
         },
         Profile {
             id: "shift_worker".to_string(),
             name: "Shift Worker".to_string(),
             description: "Irregular sleep schedule with circadian misalignment".to_string(),
-            schedule: generate_shift_worker(base_time, display_days),
+            schedule: generate_shift_worker(base_time, total_days),
         },
     ]
 }
 
 pub fn generate_profile_events(profile_id: &str, days: i64) -> EventData {
-    let base_time = Utc::now() - Duration::days(days);
+    // Round to start of current day to ensure consistent base_time across all calls
+    // This ensures events match those shown in the schedule UI
+    let now = Utc::now();
+    let today_start = now.with_hour(0).unwrap().with_minute(0).unwrap()
+        .with_second(0).unwrap().with_nanosecond(0).unwrap();
+    let base_time = today_start - Duration::days(days);
     
     let events = match profile_id {
         "healthy" => generate_healthy_routine(base_time, days),
